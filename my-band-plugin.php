@@ -77,19 +77,7 @@ function my_team_plugin_register_post_types() {
         'show_ui' => true,
         'rewrite' => array('slug' => 'kseft'),
         'supports' => array('title', 'editor'),
-        'capability_type' => 'post',
-        'capabilities' => array(
-            'edit_post' => 'edit_kseft',
-            'read_post' => 'read_kseft',
-            'delete_post' => 'delete_kseft',
-            'edit_posts' => 'edit_ksefty',
-            'edit_others_posts' => 'edit_others_ksefty',
-            'publish_posts' => 'publish_ksefty',
-            'read_private_posts' => 'read_private_ksefty'
-        ),
-        'map_meta_cap' => true,
-        'menu_icon' => 'dashicons-calendar-alt', // Přidání ikony pro 'kseft'
-        'capability' => 'manage_options' // Přidání oprávnění pro zobrazení karty
+        'menu_icon' => 'dashicons-calendar-alt' // Přidání ikony pro 'kseft'
     ));
 
     // Registrace post typu 'obsazeni_template'
@@ -247,7 +235,7 @@ add_action('add_meta_boxes', 'my_team_plugin_add_meta_boxes');
 function my_team_plugin_render_meta_box($post) {
     $location = get_post_meta($post->ID, 'kseft_location', true);
     $meeting_time = get_post_meta($post->ID, 'kseft_meeting_time', true);
-    $event_date = get_post_meta($post->ID, 'kseft_event_date', true);
+    $event_date = get_post_meta($post->ID(), 'kseft_event_date', true);
     ?>
     <label for="kseft_location">Lokace (Google Maps URL):</label>
     <input type="text" name="kseft_location" id="kseft_location" value="<?php echo esc_attr($location); ?>" size="25" />
