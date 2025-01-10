@@ -295,7 +295,25 @@ function my_team_plugin_display_kseft_details($content) {
         $status = get_post_meta(get_the_ID(), 'kseft_status', true);
         $obsazeni_template_id = get_post_meta(get_the_ID(), 'kseft_obsazeni_template', true);
         $obsazeni_template = get_post($obsazeni_template_id);
-        $custom_content = '<h3>Detaily Kšeftu</h3>';
+
+        // Přidání tlačítek pro přechod na další nebo předchozí kšeft
+        $prev_kseft = my_team_plugin_get_adjacent_kseft($event_date, 'prev');
+        $next_kseft = my_team_plugin_get_adjacent_kseft($event_date, 'next');
+        $custom_content = '<div class="kseft-navigation" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">';
+        if ($prev_kseft) {
+            $custom_content .= '<a href="' . get_permalink($prev_kseft->ID) . '" class="button" style="flex: 1; text-align: left;">Předchozí kšeft</a>';
+        } else {
+            $custom_content .= '<span style="flex: 1;"></span>';
+        }
+        $custom_content .= '<a href="' . site_url('/ksefty') . '" class="button" style="flex: 1; text-align: center;">Zpět na přehled kšeftů</a>';
+        if ($next_kseft) {
+            $custom_content .= '<a href="' . get_permalink($next_kseft->ID) . '" class="button" style="flex: 1; text-align: right;">Další kšeft</a>';
+        } else {
+            $custom_content .= '<span style="flex: 1;"></span>';
+        }
+        $custom_content .= '</div>';
+
+        $custom_content .= '<h3>Detaily Kšeftu</h3>';
         $custom_content .= '<p><strong>Lokace:</strong> <a href="' . esc_url($location) . '" target="_blank">' . esc_html($location) . '</a></p>';
         $custom_content .= '<p><strong>Čas srazu:</strong> ' . esc_html($meeting_time) . '</p>';
         $custom_content .= '<p><strong>Datum kšeftu:</strong> ' . esc_html($event_date) . '</p>';
@@ -304,7 +322,9 @@ function my_team_plugin_display_kseft_details($content) {
             $custom_content .= '<h4>Obsazení:</h4>';
             $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
             if ($roles) {
-                $custom_content .= '<ul>';
+                $custom_content .= '<table>';
+                $custom_content .= '<thead><tr><th>Název role</th><th>Potvrzení</th><th>Místo vyzvednutí</th><th>Akce</th></tr></thead>';
+                $custom_content .= '<tbody>';
                 foreach ($roles as $role_id) {
                     $role = get_post($role_id);
                     if ($role) {
@@ -321,33 +341,19 @@ function my_team_plugin_display_kseft_details($content) {
                         } else {
                             $button_class .= ' role-confirmation-nepotvrzeno';
                         }
-                        $custom_content .= '<li>' . esc_html($role->post_title);
-                        if ($role_status === 'Záskok') {
-                            $custom_content .= ' (' . esc_html($role_substitute) . ')';
-                        }
-                        $custom_content .= ' <button class="button ' . esc_attr($button_class) . '" data-role-id="' . esc_attr($role_id) . '" data-default-player="' . esc_attr($default_player) . '" data-pickup-location="' . esc_attr($pickup_location) . '">' . esc_html($button_text) . '</button></li>';
+                        $confirmation_text = $role_status === 'Záskok' ? 'Záskok: ' . esc_html($role_substitute) : esc_html($default_player);
+                        $custom_content .= '<tr>';
+                        $custom_content .= '<td>' . esc_html($role->post_title) . '</td>';
+                        $custom_content .= '<td>' . $confirmation_text . '</td>';
+                        $custom_content .= '<td>' . esc_html($pickup_location) . '</td>';
+                        $custom_content .= '<td><button class="button ' . esc_attr($button_class) . '" data-role-id="' . esc_attr($role_id) . '" data-default-player="' . esc_attr($default_player) . '" data-pickup-location="' . esc_attr($pickup_location) . '">' . esc_html($button_text) . '</button></td>';
+                        $custom_content .= '</tr>';
                     }
                 }
-                $custom_content .= '</ul>';
+                $custom_content .= '</tbody>';
+                $custom_content .= '</table>';
             }
         }
-
-        // Přidání tlačítek pro přechod na další nebo předchozí kšeft
-        $prev_kseft = my_team_plugin_get_adjacent_kseft($event_date, 'prev');
-        $next_kseft = my_team_plugin_get_adjacent_kseft($event_date, 'next');
-        $custom_content .= '<div class="kseft-navigation" style="display: flex; justify-content: space-between; align-items: center;">';
-        if ($prev_kseft) {
-            $custom_content .= '<a href="' . get_permalink($prev_kseft->ID) . '" class="button" style="flex: 1; text-align: left;">Předchozí kšeft</a>';
-        } else {
-            $custom_content .= '<span style="flex: 1;"></span>';
-        }
-        $custom_content .= '<a href="' . site_url('/ksefty') . '" class="button" style="flex: 1; text-align: center;">Zpět na přehled kšeftů</a>';
-        if ($next_kseft) {
-            $custom_content .= '<a href="' . get_permalink($next_kseft->ID) . '" class="button" style="flex: 1; text-align: right;">Další kšeft</a>';
-        } else {
-            $custom_content .= '<span style="flex: 1;"></span>';
-        }
-        $custom_content .= '</div>';
 
         // Přidání modálního okna pro potvrzení účasti
         $custom_content .= '<div id="role-confirmation-modal" style="display: none;">
@@ -370,7 +376,7 @@ function my_team_plugin_display_kseft_details($content) {
                         <input type="text" name="pickup_location" id="pickup_location" value="">
                     </div>
                     <div id="default-player-field" style="display: none;">
-                        <label for="default_player">Výchozí hráč:</label>
+                        <label for="default_player">Jméno hráče:</label>
                         <input type="text" name="default_player" id="default_player" value="">
                     </div>
                     <button type="submit" class="button">Uložit</button>

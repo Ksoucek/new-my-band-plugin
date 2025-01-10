@@ -79,23 +79,27 @@ jQuery(document).ready(function($) {
         };
         $.post(myTeamPlugin.ajax_url, data, function(response) {
             $('#role-confirmation-modal').hide();
-            updateRoleButton(data.role_id, data.role_status);
+            updateRoleButton(data.role_id, data.role_status, data.default_player, data.role_substitute);
             updateKseftStatus();
         });
     });
 
-    function updateRoleButton(roleId, roleStatus) {
+    function updateRoleButton(roleId, roleStatus, defaultPlayer, roleSubstitute) {
         var button = $('.role-confirmation[data-role-id="' + roleId + '"]');
         button.removeClass('role-confirmation-nepotvrzeno role-confirmation-jdu role-confirmation-zaskok');
+        var confirmationText = roleStatus;
         if (roleStatus === 'Jdu') {
             button.addClass('role-confirmation-jdu');
+            confirmationText = defaultPlayer;
         } else if (roleStatus === 'Záskok') {
             button.addClass('role-confirmation-zaskok');
+            confirmationText = 'Záskok: ' + roleSubstitute;
         } else {
             button.addClass('role-confirmation-nepotvrzeno');
         }
         button.text(roleStatus);
         $('#role_status').val(roleStatus);
+        button.closest('tr').find('td:nth-child(2)').text(confirmationText);
     }
 
     function updateKseftStatus() {
