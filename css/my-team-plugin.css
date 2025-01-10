@@ -1,0 +1,94 @@
+#role-confirmation-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+#role-confirmation-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+}
+
+#role-confirmation-modal .button {
+    margin-top: 10px;
+}
+
+.role-confirmation-nepotvrzeno {
+    background-color: red !important;
+    color: white !important;
+}
+
+.role-confirmation-jdu {
+    background-color: green !important;
+    color: white !important;
+}
+
+.role-confirmation-zaskok {
+    background-color: orange !important;
+    color: white !important;
+}
+
+.obsazeno, .neobsazeno {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    text-align: center;
+}
+
+.obsazeno {
+    background-color: green !important;
+    color: white !important;
+}
+
+.neobsazeno {
+    background-color: red !important;
+    color: white !important;
+}
+
+.obsazeno-se-zaskokem {
+    background-color: green !important;
+    color: white !important;
+}
+
+.rezervace-terminu {
+    background-color: blue !important;
+    color: white !important;
+}
+
+.podepsana-smlouva {
+    background-color: purple !important;
+    color: white !important;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.kseft-status-button {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 3px;
+    text-decoration: none;
+    font-weight: bold;
+    text-align: center;
+}
