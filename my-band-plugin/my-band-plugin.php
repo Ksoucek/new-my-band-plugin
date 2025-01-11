@@ -248,7 +248,7 @@ function my_team_plugin_display_ksefty() {
                 $obsazeni_class = 'neobsazeno';
                 $obsazeni_text = 'Neobsazeno';
             }
-            $formatted_date = date_i18n('D d-m-Y', strtotime($event_date));
+            $formatted_date = date_i18n('D d.m.Y', strtotime($event_date));
             $output .= '<tr>';
             $output .= '<td>' . esc_html($formatted_date) . '</td>';
             $output .= '<td><a href="' . get_permalink() . '">' . get_the_title() . '</a></td>';
