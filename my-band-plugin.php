@@ -18,6 +18,7 @@ function my_team_plugin_enqueue_scripts() {
         'api_key' => get_option('my_team_plugin_openrouteservice_api_key') // Přidání API klíče do lokalizovaného skriptu
      ));
     wp_enqueue_style('my-team-plugin-style', plugins_url('/css/my-team-plugin.css', __FILE__));
+    wp_enqueue_style('my-team-plugin-responsive-style', plugins_url('/css/my-team-plugin-responsive.css', __FILE__));
 }
 add_action('wp_enqueue_scripts', 'my_team_plugin_enqueue_scripts');
 
@@ -212,7 +213,8 @@ function my_team_plugin_display_ksefty() {
     $ksefty = new WP_Query($args);
     error_log('Query executed: ' . print_r($args, true));
     if ($ksefty->have_posts()) {
-        $output = '<table>';
+        $output = '<div class="business-overview">';
+        $output .= '<table>';
         $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></tr></thead>';
         $output .= '<tbody>';
         while ($ksefty->have_posts()) {
@@ -255,6 +257,7 @@ function my_team_plugin_display_ksefty() {
         }
         $output .= '</tbody>';
         $output .= '</table>';
+        $output .= '</div>';
         wp_reset_postdata();
     } else {
         $output = 'No ksefty found.';
