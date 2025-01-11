@@ -82,36 +82,54 @@ jQuery(document).ready(function($) {
 
     $('#optimize-transport-button').on('click', function() {
         var pickupLocations = [];
+        var addresses = [];
         $('.pickup-location').each(function() {
-            var location = $(this).val();
-            if (location) {
-                pickupLocations.push(location);
+            var address = $(this).val();
+            if (address) {
+                addresses.push(address);
             }
         });
         var destination = $('#kseft_location').val(); // Získání cílové destinace z detailu Kšeftu
+        if (destination) {
+            addresses.push(destination);
+        }
 
-        console.log('Pickup locations:', pickupLocations);
-        console.log('Destination:', destination);
-        console.log('Post ID:', myTeamPlugin.post_id);
+        var addressCount = addresses.length;
+        var processedCount = 0;
 
-        $.post(myTeamPlugin.ajax_url, {
-            action: 'optimize_transport',
-            post_id: myTeamPlugin.post_id,
-            pickup_locations: pickupLocations,
-            destination: destination
-        }, function(response) {
-            console.log('AJAX response:', response);
-            if (response.success) {
-                $('.transport-select').each(function() {
-                    $(this).val(response.data);
-                });
-                alert('Optimalizace dopravy byla dokončena.');
-            } else {
-                alert('Chyba při optimalizaci dopravy: ' + response.data);
-            }
-        }).fail(function(xhr, status, error) {
-            console.error('AJAX error:', status, error);
-            console.error('AJAX response:', xhr.responseText);
+        addresses.forEach(function(address, index) {
+            getCoordinates(address, function(error, coords) {
+                if (error) {
+                    console.error('Error getting coordinates for address:', address, error);
+                    return;
+                }
+                pickupLocations[index] = [coords[1], coords[0]]; // [longitude, latitude]
+                processedCount++;
+                if (processedCount === addressCount) {
+                    console.log('Pickup locations:', pickupLocations);
+                    console.log('Destination:', destination);
+                    console.log('Post ID:', myTeamPlugin.post_id);
+
+                    $.post(myTeamPlugin.ajax_url, {
+                        action: 'optimize_transport',
+                        post_id: myTeamPlugin.post_id,
+                        locations: pickupLocations
+                    }, function(response) {
+                        console.log('AJAX response:', response);
+                        if (response.success) {
+                            $('.transport-select').each(function() {
+                                $(this).val(response.data);
+                            });
+                            alert('Optimalizace dopravy byla dokončena.');
+                        } else {
+                            alert('Chyba při optimalizaci dopravy: ' + response.data);
+                        }
+                    }).fail(function(xhr, status, error) {
+                        console.error('AJAX error:', status, error);
+                        console.error('AJAX response:', xhr.responseText);
+                    });
+                }
+            });
         });
     });
 
@@ -173,7 +191,7 @@ jQuery(document).ready(function($) {
             }
         });
 
-        if (selectedCount > seats) {
+        if (seats > 0 && selectedCount > seats) {
             alert('Nelze vybrat více míst než je kapacita auta.');
             $(this).val('');
             return;
@@ -231,4 +249,91 @@ jQuery(document).ready(function($) {
             kseftButton.text('Neobsazeno');
         }
     }
+
+    function getCoordinates(address, callback) {
+        $.post(myTeamPlugin.ajax_url, {
+            action: 'get_coordinates',
+            address: address
+        }, function(response) {
+            if (response.success) {
+                callback(null, response.data);
+            } else {
+                callback(response.data);
+            }
+        }).fail(function(xhr, status, error) {
+            callback(error);
+        });
+    }
+
+    function initializeAutocomplete(inputId, mapId) {
+        var input = document.getElementById(inputId);
+        var autocomplete = new google.maps.places.Autocomplete(input);
+        var map = new google.maps.Map(document.getElementById(mapId), {
+            center: { lat: -34.397, lng: 150.644 },
+            zoom: 8
+        });
+        var marker = new google.maps.Marker({
+            map: map,
+            anchorPoint: new google.maps.Point(0, -29)
+        });
+
+        autocomplete.addListener('place_changed', function() {
+            marker.setVisible(false);
+            var place = autocomplete.getPlace();
+            if (!place.geometry) {
+                window.alert("No details available for input: '" + place.name + "'");
+                return;
+            }
+
+            // If the place has a geometry, then present it on a map.
+            if (place.geometry.viewport) {
+                map.fitBounds(place.geometry.viewport);
+            } else {
+                map.setCenter(place.geometry.location);
+                map.setZoom(17);  // Why 17? Because it looks good.
+            }
+            marker.setPosition(place.geometry.location);
+            marker.setVisible(true);
+
+            var address = '';
+            if (place.address_components) {
+                address = [
+                    (place.address_components[0] && place.address_components[0].short_name || ''),
+                    (place.address_components[1] && place.address_components[1].short_name || ''),
+                    (place.address_components[2] && place.address_components[2].short_name || '')
+                ].join(' ');
+            }
+
+            $('#' + inputId).val(address);
+        });
+    }
+
+    // Initialize autocomplete for all address inputs
+    initializeAutocomplete('pickup_location', 'map');
+    initializeAutocomplete('role_default_pickup_location', 'map-role-default');
+    initializeAutocomplete('kseft_location', 'map-kseft');
+    initializeAutocomplete('kseft_location_wp', 'map-kseft-wp');
+
+    $('#optimize-transport-button').on('click', function() {
+        var locations = [
+            // Přidejte zde lokace ve formátu [longitude, latitude]
+        ];
+
+        $.ajax({
+            url: myTeamPlugin.ajax_url,
+            method: 'POST',
+            data: {
+                action: 'optimize_transport',
+                locations: locations
+            },
+            success: function(response) {
+                var data = JSON.parse(response);
+                console.log('Optimalizace jízdy:', data);
+                // Zpracujte data a aktualizujte UI podle potřeby
+            },
+            error: function(error) {
+                console.error('Chyba při optimalizaci jízdy:', error);
+            }
+        });
+    });
 });

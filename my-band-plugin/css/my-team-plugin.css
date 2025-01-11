@@ -92,3 +92,13 @@ table th {
     font-weight: bold;
     text-align: center;
 }
+
+#map, #map-role-default, #map-kseft, #map-kseft-wp {
+    height: 400px;
+    width: 100%;
+}
+
+#map-kseft {
+    height: 400px;
+    width: 100%;
+}

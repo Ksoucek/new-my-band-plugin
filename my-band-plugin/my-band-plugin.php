@@ -17,6 +17,7 @@ function my_team_plugin_enqueue_scripts() {
         'post_id' => get_the_ID(), // Přidání post_id do lokalizovaného skriptu
         'api_key' => get_option('my_team_plugin_openrouteservice_api_key') // Přidání API klíče do lokalizovaného skriptu
      ));
+    wp_enqueue_script('google-maps', 'https://maps.googleapis.com/maps/api/js?key=' . get_option('my_team_plugin_google_maps_api_key') . '&libraries=places', null, null, true);
     wp_enqueue_style('my-team-plugin-style', plugins_url('/css/my-team-plugin.css', __FILE__));
     wp_enqueue_style('my-team-plugin-responsive-style', plugins_url('/css/my-team-plugin-responsive.css', __FILE__));
 }
@@ -215,7 +216,7 @@ function my_team_plugin_display_ksefty() {
     if ($ksefty->have_posts()) {
         $output = '<div class="business-overview">';
         $output .= '<table>';
-        $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></tr></thead>';
+        $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></thead>';
         $output .= '<tbody>';
         while ($ksefty->have_posts()) {
             $ksefty->the_post();
@@ -247,10 +248,11 @@ function my_team_plugin_display_ksefty() {
                 $obsazeni_class = 'neobsazeno';
                 $obsazeni_text = 'Neobsazeno';
             }
+            $formatted_date = date_i18n('D d-m-Y', strtotime($event_date));
             $output .= '<tr>';
-            $output .= '<td>' . esc_html($event_date) . '</td>';
+            $output .= '<td>' . esc_html($formatted_date) . '</td>';
             $output .= '<td><a href="' . get_permalink() . '">' . get_the_title() . '</a></td>';
-            $output .= '<td><a href="' . esc_url($location) . '" target="_blank">' . esc_html($location) . '</a></td>';
+            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($location) . '</a></td>';
             $output .= '<td><a href="' . get_permalink() . '" class="button kseft-status-button ' . esc_attr($obsazeni_class) . '">' . esc_html($obsazeni_text) . '</a></td>';
             $output .= '<td>' . esc_html($status) . '</td>';
             $output .= '</tr>';
@@ -258,6 +260,7 @@ function my_team_plugin_display_ksefty() {
         $output .= '</tbody>';
         $output .= '</table>';
         $output .= '</div>';
+        $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>';
         wp_reset_postdata();
     } else {
         $output = 'No ksefty found.';
@@ -280,16 +283,32 @@ add_action('add_meta_boxes', 'my_team_plugin_add_meta_boxes');
 function my_team_plugin_render_meta_box($post) {
     $location = get_post_meta($post->ID, 'kseft_location', true);
     $meeting_time = get_post_meta($post->ID, 'kseft_meeting_time', true);
-    $event_date = get_post_meta($post->ID(), 'kseft_event_date', true);
+    $event_date = get_post_meta($post->ID, 'kseft_event_date', true);
+    $status = get_post_meta($post->ID, 'kseft_status', true); // Přidání pole pro stav
+    $clothing = get_post_meta($post->ID, 'kseft_clothing', true); // Přidání pole pro oblečení
     ?>
     <label for="kseft_location">Lokace (Google Maps URL):</label>
-    <input type="text" name="kseft_location" id="kseft_location" value="<?php echo esc_attr($location); ?>" size="25" />
+    <input type="text" name="kseft_location" id="kseft_location_wp" value="<?php echo esc_attr($location); ?>" size="25" />
+    <div id="map-kseft-wp"></div>
     <br><br>
     <label for="kseft_meeting_time">Čas srazu:</label>
     <input type="text" name="kseft_meeting_time" id="kseft_meeting_time" value="<?php echo esc_attr($meeting_time); ?>" size="25" />
     <br><br>
     <label for="kseft_event_date">Datum kšeftu:</label>
     <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($event_date); ?>" size="25" />
+    <br><br>
+    <label for="kseft_status">Stav kšeftu:</label>
+    <select name="kseft_status" id="kseft_status">
+        <option value="Rezervace termínu" <?php selected($status, 'Rezervace termínu'); ?>>Rezervace termínu</option>
+        <option value="Podepsaná smlouva" <?php selected($status, 'Podepsaná smlouva'); ?>>Podepsaná smlouva</option>
+    </select>
+    <br><br>
+    <label for="kseft_clothing">Oblečení:</label>
+    <select name="kseft_clothing" id="kseft_clothing">
+        <option value="krojová košile" <?php selected($clothing, 'krojová košile'); ?>>Krojová košile</option>
+        <option value="společenská košile" <?php selected($clothing, 'společenská košile'); ?>>Společenská košile</option>
+        <option value="Tmavý civil" <?php selected($clothing, 'Tmavý civil'); ?>>Tmavý civil</option>
+    </select>
     <?php
 }
 
@@ -303,7 +322,14 @@ function my_team_plugin_save_meta_box_data($post_id) {
     if (array_key_exists('kseft_event_date', $_POST)) {
         update_post_meta($post_id, 'kseft_event_date', sanitize_text_field($_POST['kseft_event_date']));
     }
+    if (array_key_exists('kseft_status', $_POST)) { // Uložení pole pro stav
+        update_post_meta($post_id, 'kseft_status', sanitize_text_field($_POST['kseft_status']));
+    }
+    if (array_key_exists('kseft_clothing', $_POST)) { // Uložení pole pro oblečení
+        update_post_meta($post_id, 'kseft_clothing', sanitize_text_field($_POST['kseft_clothing']));
+    }
 }
+
 add_action('save_post', 'my_team_plugin_save_meta_box_data');
 
 function my_team_plugin_add_kseft_meta_boxes() {
@@ -350,12 +376,13 @@ add_action('save_post', 'my_team_plugin_save_kseft_meta_box_data');
 
 function my_team_plugin_display_kseft_details($content) {
     if (is_singular('kseft')) {
-        $location = get_post_meta(get_the_ID(), 'kseft_location', true);
-        $meeting_time = get_post_meta(get_the_ID(), 'kseft_meeting_time', true);
-        $event_date = get_post_meta(get_the_ID(), 'kseft_event_date', true);
-        $status = get_post_meta(get_the_ID(), 'kseft_status', true);
-        $clothing = get_post_meta(get_the_ID(), 'kseft_clothing', true);
-        $obsazeni_template_id = get_post_meta(get_the_ID(), 'kseft_obsazeni_template', true);
+        $kseft_id = get_the_ID();
+        $location = get_post_meta($kseft_id, 'kseft_location', true);
+        $meeting_time = get_post_meta($kseft_id, 'kseft_meeting_time', true);
+        $event_date = get_post_meta($kseft_id, 'kseft_event_date', true);
+        $status = get_post_meta($kseft_id, 'kseft_status', true);
+        $clothing = get_post_meta($kseft_id, 'kseft_clothing', true);
+        $obsazeni_template_id = get_post_meta($kseft_id, 'kseft_obsazeni_template', true);
         $obsazeni_template = get_post($obsazeni_template_id);
 
         // Přidání tlačítek pro přechod na další nebo předchozí kšeft
@@ -376,7 +403,7 @@ function my_team_plugin_display_kseft_details($content) {
         $custom_content .= '</div>';
 
         $custom_content .= '<h3>Detaily Kšeftu</h3>';
-        $custom_content .= '<p><strong>Lokace:</strong> <a href="' . esc_url($location) . '" target="_blank">' . esc_html($location) . '</a></p>';
+        $custom_content .= '<p><strong>Lokace:</strong> ' . esc_html($location) . '</p>';
         $custom_content .= '<p><strong>Čas srazu:</strong> ' . esc_html($meeting_time) . '</p>';
         $custom_content .= '<p><strong>Datum kšeftu:</strong> ' . esc_html($event_date) . '</p>';
         $custom_content .= '<p><strong>Status:</strong> ' . esc_html($status) . '</p>';
@@ -391,12 +418,12 @@ function my_team_plugin_display_kseft_details($content) {
                 foreach ($roles as $role_id) {
                     $role = get_post($role_id);
                     if ($role) {
-                        $role_status = get_post_meta(get_the_ID(), 'role_status_' . $role_id, true);
-                        $role_substitute = get_post_meta(get_the_ID(), 'role_substitute_' . $role_id, true);
+                        $role_status = get_post_meta($kseft_id, 'role_status_' . $role_id, true);
+                        $role_substitute = get_post_meta($kseft_id, 'role_substitute_' . $role_id, true);
                         $default_player = get_post_meta($role_id, 'role_default_player', true);
                         $default_pickup_location = get_post_meta($role_id, 'role_default_pickup_location', true);
-                        $pickup_location = get_post_meta(get_the_ID(), 'pickup_location_' . $role_id, true);
-                        $transport = get_post_meta(get_the_ID(), 'transport_' . $role_id, true);
+                        $pickup_location = get_post_meta($kseft_id, 'pickup_location_' . $role_id, true);
+                        $transport = get_post_meta($kseft_id, 'transport_' . $role_id, true);
                         $button_class = 'role-confirmation';
                         $button_text = $role_status ?: 'Nepotvrzeno';
                         if ($role_status === 'Jdu') {
@@ -431,6 +458,9 @@ function my_team_plugin_display_kseft_details($content) {
                 $custom_content .= '</table>';
             }
         }
+
+        // Přidání tlačítka pro úpravu kšeftu
+        $custom_content .= '<a href="' . add_query_arg('kseft_id', $kseft_id, site_url('/manage-kseft')) . '" class="button">Upravit Kšeft</a>';
 
         // Přidání tlačítek pro ruční spuštění optimalizace dopravy a testování API
         $custom_content .= '<button id="optimize-transport-button" class="button">Optimalizovat dopravu</button>';
@@ -684,6 +714,7 @@ function my_team_plugin_render_settings_page() {
 
 function my_team_plugin_register_settings() {
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_google_maps_api_key');
+    register_setting('my_team_plugin_settings_group', 'my_team_plugin_openrouteservice_api_key');
 
     add_settings_section(
         'my_team_plugin_settings_section',
@@ -699,6 +730,14 @@ function my_team_plugin_register_settings() {
         'my-team-plugin-settings',
         'my_team_plugin_settings_section'
     );
+
+    add_settings_field(
+        'my_team_plugin_openrouteservice_api_key',
+        'OpenRouteService API Key',
+        'my_team_plugin_openrouteservice_api_key_callback',
+        'my-team-plugin-settings',
+        'my_team_plugin_settings_section'
+    );
 }
 add_action('admin_init', 'my_team_plugin_register_settings');
 
@@ -706,6 +745,13 @@ function my_team_plugin_google_maps_api_key_callback() {
     $api_key = get_option('my_team_plugin_google_maps_api_key');
     ?>
     <input type="text" name="my_team_plugin_google_maps_api_key" value="<?php echo esc_attr($api_key); ?>" size="50">
+    <?php
+}
+
+function my_team_plugin_openrouteservice_api_key_callback() {
+    $api_key = get_option('my_team_plugin_openrouteservice_api_key');
+    ?>
+    <input type="text" name="my_team_plugin_openrouteservice_api_key" value="<?php echo esc_attr($api_key); ?>" size="50">
     <?php
 }
 
@@ -723,5 +769,23 @@ function my_team_plugin_display_clothing_column($column, $post_id) {
     }
 }
 add_action('manage_kseft_posts_custom_column', 'my_team_plugin_display_clothing_column', 10, 2);
+
+// Registrace vlastních šablon stránek
+function my_team_plugin_register_templates($templates) {
+    $templates['manage-kseft.php'] = 'Manage Kseft';
+    $templates['kseft-details.php'] = 'Kseft Details';
+    return $templates;
+}
+add_filter('theme_page_templates', 'my_team_plugin_register_templates');
+
+function my_team_plugin_load_template($template) {
+    if (get_page_template_slug() === 'manage-kseft.php') {
+        $template = plugin_dir_path(__FILE__) . 'templates/manage-kseft.php';
+    } elseif (get_page_template_slug() === 'kseft-details.php') {
+        $template = plugin_dir_path(__FILE__) . 'templates/kseft-details.php';
+    }
+    return $template;
+}
+add_filter('template_include', 'my_team_plugin_load_template');
 
 ?>
