@@ -8,11 +8,14 @@ Author: Vaše Jméno
 
 error_log('Muzikantské kšefty plugin loaded');
 
+require_once plugin_dir_path(__FILE__) . 'includes/transport-optimization.php';
+
 function my_team_plugin_enqueue_scripts() {
     wp_enqueue_script('my-team-plugin-script', plugins_url('/js/my-team-plugin.js', __FILE__), array('jquery'), '1.0', true);
     wp_localize_script('my-team-plugin-script', 'myTeamPlugin', array(
         'ajax_url' => admin_url('admin-ajax.php'),
-        'post_id' => get_the_ID() // Přidání post_id do lokalizovaného skriptu
+        'post_id' => get_the_ID(), // Přidání post_id do lokalizovaného skriptu
+        'api_key' => get_option('my_team_plugin_openrouteservice_api_key') // Přidání API klíče do lokalizovaného skriptu
      ));
     wp_enqueue_style('my-team-plugin-style', plugins_url('/css/my-team-plugin.css', __FILE__));
 }
@@ -133,12 +136,40 @@ function my_team_plugin_register_post_types() {
         'supports' => array('title', 'editor'),
         'menu_icon' => 'dashicons-groups' // Přidání ikony pro 'role'
     ));
+
+    // Registrace post typu 'auta'
+    register_post_type('auta', array(
+        'labels' => array(
+            'name' => __('Auta', 'textdomain'),
+            'singular_name' => __('Auto', 'textdomain'),
+            'menu_name' => __('Auta', 'textdomain'),
+            'name_admin_bar' => __('Auto', 'textdomain'),
+            'add_new' => __('Přidat nové', 'textdomain'),
+            'add_new_item' => __('Přidat nové auto', 'textdomain'),
+            'new_item' => __('Nové auto', 'textdomain'),
+            'edit_item' => __('Upravit auto', 'textdomain'),
+            'view_item' => __('Zobrazit auto', 'textdomain'),
+            'all_items' => __('Všechna auta', 'textdomain'),
+            'search_items' => __('Hledat auta', 'textdomain'),
+            'parent_item_colon' => __('Nadřazené auto:', 'textdomain'),
+            'not_found' => __('Žádná auta nenalezena.', 'textdomain'),
+            'not_found_in_trash' => __('Žádná auta v koši.', 'textdomain')
+        ),
+        'public' => true,
+        'has_archive' => true,
+        'show_in_menu' => true,
+        'show_ui' => true,
+        'rewrite' => array('slug' => 'auta'),
+        'supports' => array('title', 'editor'),
+        'menu_icon' => 'dashicons-car' // Přidání ikony pro 'auta'
+    ));
 }
 add_action('init', 'my_team_plugin_register_post_types');
 
-// Přidání metaboxu pro výchozího hráče při tvorbě role
+// Přidání metaboxu pro výchozího hráče a výchozí místo vyzvednutí při tvorbě role
 function my_team_plugin_add_role_meta_boxes() {
     add_meta_box('role_default_player', 'Výchozí hráč', 'my_team_plugin_render_role_default_player_meta_box', 'role', 'normal', 'high');
+    add_meta_box('role_default_pickup_location', 'Výchozí místo vyzvednutí', 'my_team_plugin_render_role_default_pickup_location_meta_box', 'role', 'normal', 'high');
 }
 add_action('add_meta_boxes', 'my_team_plugin_add_role_meta_boxes');
 
@@ -150,9 +181,20 @@ function my_team_plugin_render_role_default_player_meta_box($post) {
     <?php
 }
 
+function my_team_plugin_render_role_default_pickup_location_meta_box($post) {
+    $default_pickup_location = get_post_meta($post->ID, 'role_default_pickup_location', true);
+    ?>
+    <label for="role_default_pickup_location">Výchozí místo vyzvednutí:</label>
+    <input type="text" name="role_default_pickup_location" id="role_default_pickup_location" value="<?php echo esc_attr($default_pickup_location); ?>" size="25" />
+    <?php
+}
+
 function my_team_plugin_save_role_meta_box_data($post_id) {
     if (array_key_exists('role_default_player', $_POST)) {
         update_post_meta($post_id, 'role_default_player', sanitize_text_field($_POST['role_default_player']));
+    }
+    if (array_key_exists('role_default_pickup_location', $_POST)) {
+        update_post_meta($post_id, 'role_default_pickup_location', sanitize_text_field($_POST['role_default_pickup_location']));
     }
 }
 add_action('save_post', 'my_team_plugin_save_role_meta_box_data');
@@ -263,6 +305,7 @@ add_action('save_post', 'my_team_plugin_save_meta_box_data');
 
 function my_team_plugin_add_kseft_meta_boxes() {
     add_meta_box('kseft_obsazeni_template', 'Šablona obsazení', 'my_team_plugin_render_kseft_obsazeni_template_meta_box', 'kseft', 'side', 'default');
+    add_meta_box('kseft_clothing', 'Oblečení', 'my_team_plugin_render_kseft_clothing_meta_box', 'kseft', 'side', 'default');
 }
 add_action('add_meta_boxes', 'my_team_plugin_add_kseft_meta_boxes');
 
@@ -280,9 +323,24 @@ function my_team_plugin_render_kseft_obsazeni_template_meta_box($post) {
     <?php
 }
 
+function my_team_plugin_render_kseft_clothing_meta_box($post) {
+    $selected_clothing = get_post_meta($post->ID, 'kseft_clothing', true);
+    ?>
+    <label for="kseft_clothing">Vyberte oblečení:</label>
+    <select name="kseft_clothing" id="kseft_clothing">
+        <option value="krojová košile" <?php selected($selected_clothing, 'krojová košile'); ?>>Krojová košile</option>
+        <option value="společenská košile" <?php selected($selected_clothing, 'společenská košile'); ?>>Společenská košile</option>
+        <option value="Tmavý civil" <?php selected($selected_clothing, 'Tmavý civil'); ?>>Tmavý civil</option>
+    </select>
+    <?php
+}
+
 function my_team_plugin_save_kseft_meta_box_data($post_id) {
     if (array_key_exists('kseft_obsazeni_template', $_POST)) {
         update_post_meta($post_id, 'kseft_obsazeni_template', sanitize_text_field($_POST['kseft_obsazeni_template']));
+    }
+    if (array_key_exists('kseft_clothing', $_POST)) {
+        update_post_meta($post_id, 'kseft_clothing', sanitize_text_field($_POST['kseft_clothing']));
     }
 }
 add_action('save_post', 'my_team_plugin_save_kseft_meta_box_data');
@@ -293,6 +351,7 @@ function my_team_plugin_display_kseft_details($content) {
         $meeting_time = get_post_meta(get_the_ID(), 'kseft_meeting_time', true);
         $event_date = get_post_meta(get_the_ID(), 'kseft_event_date', true);
         $status = get_post_meta(get_the_ID(), 'kseft_status', true);
+        $clothing = get_post_meta(get_the_ID(), 'kseft_clothing', true);
         $obsazeni_template_id = get_post_meta(get_the_ID(), 'kseft_obsazeni_template', true);
         $obsazeni_template = get_post($obsazeni_template_id);
 
@@ -318,12 +377,13 @@ function my_team_plugin_display_kseft_details($content) {
         $custom_content .= '<p><strong>Čas srazu:</strong> ' . esc_html($meeting_time) . '</p>';
         $custom_content .= '<p><strong>Datum kšeftu:</strong> ' . esc_html($event_date) . '</p>';
         $custom_content .= '<p><strong>Status:</strong> ' . esc_html($status) . '</p>';
+        $custom_content .= '<p><strong>Oblečení:</strong> ' . esc_html($clothing) . '</p>';
         if ($obsazeni_template) {
             $custom_content .= '<h4>Obsazení:</h4>';
             $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
             if ($roles) {
                 $custom_content .= '<table>';
-                $custom_content .= '<thead><tr><th>Název role</th><th>Potvrzení</th><th>Místo vyzvednutí</th><th>Akce</th></tr></thead>';
+                $custom_content .= '<thead><tr><th>Název role</th><th>Potvrzení</th><th>Místo vyzvednutí</th><th>Doprava</th><th>Akce</th></tr></thead>';
                 $custom_content .= '<tbody>';
                 foreach ($roles as $role_id) {
                     $role = get_post($role_id);
@@ -331,7 +391,9 @@ function my_team_plugin_display_kseft_details($content) {
                         $role_status = get_post_meta(get_the_ID(), 'role_status_' . $role_id, true);
                         $role_substitute = get_post_meta(get_the_ID(), 'role_substitute_' . $role_id, true);
                         $default_player = get_post_meta($role_id, 'role_default_player', true);
+                        $default_pickup_location = get_post_meta($role_id, 'role_default_pickup_location', true);
                         $pickup_location = get_post_meta(get_the_ID(), 'pickup_location_' . $role_id, true);
+                        $transport = get_post_meta(get_the_ID(), 'transport_' . $role_id, true);
                         $button_class = 'role-confirmation';
                         $button_text = $role_status ?: 'Nepotvrzeno';
                         if ($role_status === 'Jdu') {
@@ -346,7 +408,19 @@ function my_team_plugin_display_kseft_details($content) {
                         $custom_content .= '<td>' . esc_html($role->post_title) . '</td>';
                         $custom_content .= '<td>' . $confirmation_text . '</td>';
                         $custom_content .= '<td>' . esc_html($pickup_location) . '</td>';
-                        $custom_content .= '<td><button class="button ' . esc_attr($button_class) . '" data-role-id="' . esc_attr($role_id) . '" data-default-player="' . esc_attr($default_player) . '" data-pickup-location="' . esc_attr($pickup_location) . '">' . esc_html($button_text) . '</button></td>';
+                        $custom_content .= '<td>
+                            <select name="transport_' . esc_attr($role_id) . '" class="transport-select" data-role-id="' . esc_attr($role_id) . '">
+                                <option value="">-- Vyberte auto --</option>';
+                        $auta = get_posts(array('post_type' => 'auta', 'numberposts' => -1));
+                        foreach ($auta as $auto) {
+                            $auto_title = get_the_title($auto->ID);
+                            $seats = get_post_meta($auto->ID, 'doprava_seats', true);
+                            $driver = get_post_meta($auto->ID, 'doprava_driver', true);
+                            $custom_content .= '<option value="' . esc_attr($auto_title) . '" data-seats="' . esc_attr($seats) . '" ' . selected($transport, $auto_title, false) . '>' . esc_html($auto_title) . ' (' . esc_html($seats) . ' míst, řidič: ' . esc_html($driver) . ')</option>';
+                        }
+                        $custom_content .= '</select>
+                        </td>';
+                        $custom_content .= '<td><button class="button ' . esc_attr($button_class) . '" data-role-id="' . esc_attr($role_id) . '" data-default-player="' . esc_attr($default_player) . '" data-pickup-location="' . esc_attr($pickup_location) . '" data-default-pickup-location="' . esc_attr($default_pickup_location) . '">' . esc_html($button_text) . '</button></td>';
                         $custom_content .= '</tr>';
                     }
                 }
@@ -354,6 +428,10 @@ function my_team_plugin_display_kseft_details($content) {
                 $custom_content .= '</table>';
             }
         }
+
+        // Přidání tlačítek pro ruční spuštění optimalizace dopravy a testování API
+        $custom_content .= '<button id="optimize-transport-button" class="button">Optimalizovat dopravu</button>';
+        $custom_content .= '<button id="test-api-button" class="button">Test API</button>';
 
         // Přidání modálního okna pro potvrzení účasti
         $custom_content .= '<div id="role-confirmation-modal" style="display: none;">
@@ -423,16 +501,31 @@ function my_team_plugin_save_role_confirmation() {
     $role_status = sanitize_text_field($_POST['role_status']);
     $role_substitute = sanitize_text_field($_POST['role_substitute']);
     $pickup_location = sanitize_text_field($_POST['pickup_location']);
+    $transport = sanitize_text_field($_POST['transport']);
 
     update_post_meta($post_id, 'role_status_' . $role_id, $role_status);
     update_post_meta($post_id, 'role_substitute_' . $role_id, $role_substitute);
     update_post_meta($post_id, 'pickup_location_' . $role_id, $pickup_location);
+    update_post_meta($post_id, 'transport_' . $role_id, $transport);
 
     echo 'Účast byla potvrzena.';
     wp_die();
 }
 add_action('wp_ajax_save_role_confirmation', 'my_team_plugin_save_role_confirmation');
 add_action('wp_ajax_nopriv_save_role_confirmation', 'my_team_plugin_save_role_confirmation');
+
+function my_team_plugin_save_role_transport() {
+    $post_id = intval($_POST['post_id']);
+    $role_id = intval($_POST['role_id']);
+    $transport = sanitize_text_field($_POST['transport']);
+
+    update_post_meta($post_id, 'transport_' . $role_id, $transport);
+
+    echo 'Doprava byla uložena.';
+    wp_die();
+}
+add_action('wp_ajax_save_role_transport', 'my_team_plugin_save_role_transport');
+add_action('wp_ajax_nopriv_save_role_transport', 'my_team_plugin_save_role_transport');
 
 // Přidání metaboxu pro výběr rolí při tvorbě šablony obsazení
 function my_team_plugin_add_obsazeni_template_meta_boxes() {
@@ -517,5 +610,115 @@ function my_team_plugin_save_kseft_details_meta_box_data($post_id) {
     }
 }
 add_action('save_post', 'my_team_plugin_save_kseft_details_meta_box_data');
+
+// Přidání metaboxu pro vlastnosti dopravy
+function my_team_plugin_add_doprava_meta_boxes() {
+    add_meta_box('doprava_seats', 'Počet míst', 'my_team_plugin_render_doprava_seats_meta_box', 'auta', 'normal', 'high');
+    add_meta_box('doprava_driver', 'Řidič', 'my_team_plugin_render_doprava_driver_meta_box', 'auta', 'normal', 'high');
+}
+add_action('add_meta_boxes', 'my_team_plugin_add_doprava_meta_boxes');
+
+function my_team_plugin_render_doprava_seats_meta_box($post) {
+    $seats = get_post_meta($post->ID, 'doprava_seats', true);
+    ?>
+    <label for="doprava_seats">Počet míst:</label>
+    <input type="number" name="doprava_seats" id="doprava_seats" value="<?php echo esc_attr($seats); ?>" size="25" />
+    <?php
+}
+
+function my_team_plugin_render_doprava_driver_meta_box($post) {
+    $driver = get_post_meta($post->ID, 'doprava_driver', true);
+    $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
+    ?>
+    <label for="doprava_driver">Řidič:</label>
+    <select name="doprava_driver" id="doprava_driver">
+        <option value="">-- Vyberte řidiče --</option>
+        <?php foreach ($roles as $role) : ?>
+    $destination = sanitize_text_field($_GET['destination']);
+            <?php $driver_name = get_post_meta($role->ID, 'role_default_player', true); ?>
+            <option value="<?php echo esc_attr($driver_name); ?>" <?php selected($driver, $driver_name); ?>><?php echo esc_html($driver_name); ?></option>
+        <?php endforeach; ?>
+    </select>
+    <?php
+}
+
+function my_team_plugin_save_doprava_meta_box_data($post_id) {
+    if (array_key_exists('doprava_seats', $_POST)) {
+        update_post_meta($post_id, 'doprava_seats', intval($_POST['doprava_seats']));
+    }
+    if (array_key_exists('doprava_driver', $_POST)) {
+        update_post_meta($post_id, 'doprava_driver', sanitize_text_field($_POST['doprava_driver']));
+    }
+}
+add_action('save_post', 'my_team_plugin_save_doprava_meta_box_data');
+
+// Přidání stránky nastavení pluginu
+function my_team_plugin_add_settings_page() {
+    add_options_page(
+        'Nastavení Muzikantské kšefty',
+        'Muzikantské kšefty',
+        'manage_options',
+        'my-team-plugin-settings',
+        'my_team_plugin_render_settings_page'
+    );
+}
+add_action('admin_menu', 'my_team_plugin_add_settings_page');
+
+function my_team_plugin_render_settings_page() {
+    ?>
+    <div class="wrap">
+        <h1>Nastavení Muzikantské kšefty</h1>
+        <form method="post" action="options.php">
+            <?php
+            settings_fields('my_team_plugin_settings_group');
+            do_settings_sections('my-team-plugin-settings');
+            submit_button();
+            ?>
+        </form>
+    </div>
+    <?php
+}
+
+function my_team_plugin_register_settings() {
+    register_setting('my_team_plugin_settings_group', 'my_team_plugin_google_maps_api_key');
+
+    add_settings_section(
+        'my_team_plugin_settings_section',
+        'Obecná nastavení',
+        null,
+        'my-team-plugin-settings'
+    );
+
+    add_settings_field(
+        'my_team_plugin_google_maps_api_key',
+        'Google Maps API Key',
+        'my_team_plugin_google_maps_api_key_callback',
+        'my-team-plugin-settings',
+        'my_team_plugin_settings_section'
+    );
+}
+add_action('admin_init', 'my_team_plugin_register_settings');
+
+function my_team_plugin_google_maps_api_key_callback() {
+    $api_key = get_option('my_team_plugin_google_maps_api_key');
+    ?>
+    <input type="text" name="my_team_plugin_google_maps_api_key" value="<?php echo esc_attr($api_key); ?>" size="50">
+    <?php
+}
+
+// Přidání sloupce pro oblečení do přehledu kšeftů
+function my_team_plugin_add_clothing_column($columns) {
+    $columns['kseft_clothing'] = 'Oblečení';
+    return $columns;
+}
+add_filter('manage_kseft_posts_columns', 'my_team_plugin_add_clothing_column');
+
+function my_team_plugin_display_clothing_column($column, $post_id) {
+    if ($column === 'kseft_clothing') {
+        $clothing = get_post_meta($post_id, 'kseft_clothing', true);
+        echo esc_html($clothing);
+    }
+}
+add_action('manage_kseft_posts_custom_column', 'my_team_plugin_display_clothing_column', 10, 2);
 
 ?>
