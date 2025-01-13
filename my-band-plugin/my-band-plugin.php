@@ -806,4 +806,16 @@ function my_team_plugin_load_template($template) {
 }
 add_filter('template_include', 'my_team_plugin_load_template');
 
+function my_team_plugin_test_openai_api() {
+    $result = test_openai_api();
+
+    if (isset($result['error'])) {
+        wp_send_json_error(['error' => $result['error']]);
+    }
+
+    wp_send_json_success(['response' => $result['response']]);
+}
+add_action('wp_ajax_test_openai_api', 'my_team_plugin_test_openai_api');
+add_action('wp_ajax_nopriv_test_openai_api', 'my_team_plugin_test_openai_api');
+
 ?>

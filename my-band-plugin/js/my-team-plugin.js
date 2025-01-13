@@ -140,18 +140,20 @@ jQuery(document).ready(function($) {
 
     $('#test-api-button').on('click', function() {
         $.post(myTeamPlugin.ajax_url, {
-            action: 'test_api'
+            action: 'test_openai_api'
         }, function(response) {
             console.log('API Test response:', response);
             if (response.success) {
-                console.log('API Test data:', response.data);
+                console.log('API Test data:', response.response);
                 alert('API Test proběhl úspěšně. Výsledek je v konzoli.');
             } else {
-                alert('Chyba při testování API: ' + response.data);
+                console.error('API Test error:', response.error);
+                alert('Chyba při testování API: ' + response.error);
             }
         }).fail(function(xhr, status, error) {
             console.error('API Test error:', status, error);
             console.error('API Test response:', xhr.responseText);
+            alert('Chyba při testování API: ' + error);
         });
     });
 
