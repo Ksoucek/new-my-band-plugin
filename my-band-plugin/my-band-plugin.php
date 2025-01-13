@@ -213,8 +213,8 @@ function my_team_plugin_display_ksefty() {
     );
     $ksefty = new WP_Query($args);
     error_log('Query executed: ' . print_r($args, true));
+    $output = '<div class="business-overview">';
     if ($ksefty->have_posts()) {
-        $output = '<div class="business-overview">';
         $output .= '<table>';
         $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></thead>';
         $output .= '<tbody>';
@@ -259,12 +259,12 @@ function my_team_plugin_display_ksefty() {
         }
         $output .= '</tbody>';
         $output .= '</table>';
-        $output .= '</div>';
-        $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>';
         wp_reset_postdata();
     } else {
-        $output = 'No ksefty found.';
+        $output .= '<p>Žádné kšefty nejsou k dispozici.</p>';
     }
+    $output .= '</div>';
+    $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>';
     error_log('Output: ' . $output);
     return $output;
 }
@@ -413,7 +413,7 @@ function my_team_plugin_display_kseft_details($content) {
             $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
             if ($roles) {
                 $custom_content .= '<table>';
-                $custom_content .= '<thead><tr><th>Název role</th><th>Potvrzení</th><th>Místo vyzvednutí</th><th>Doprava</th><th>Akce</th></tr></thead>';
+                $custom_content .= '<thead><tr><th>Název role</th><th>Potvrzení</th><th>Místo vyzvednutí</th><th>Čas vyzvednutí</th><th>Doprava</th><th>Akce</th></tr></thead>';
                 $custom_content .= '<tbody>';
                 foreach ($roles as $role_id) {
                     $role = get_post($role_id);
@@ -423,6 +423,7 @@ function my_team_plugin_display_kseft_details($content) {
                         $default_player = get_post_meta($role_id, 'role_default_player', true);
                         $default_pickup_location = get_post_meta($role_id, 'role_default_pickup_location', true);
                         $pickup_location = get_post_meta($kseft_id, 'pickup_location_' . $role_id, true);
+                        $pickup_time = get_post_meta($kseft_id, 'pickup_time_' . $role_id, true); // Přidání pole pro čas vyzvednutí
                         $transport = get_post_meta($kseft_id, 'transport_' . $role_id, true);
                         $button_class = 'role-confirmation';
                         $button_text = $role_status ?: 'Nepotvrzeno';
@@ -438,6 +439,7 @@ function my_team_plugin_display_kseft_details($content) {
                         $custom_content .= '<td>' . esc_html($role->post_title) . '</td>';
                         $custom_content .= '<td>' . $confirmation_text . '</td>';
                         $custom_content .= '<td>' . esc_html($pickup_location) . '</td>';
+                        $custom_content .= '<td class="pickup-time">' . esc_html($pickup_time) . '</td>'; // Přidání nového sloupce
                         $custom_content .= '<td>
                             <select name="transport_' . esc_attr($role_id) . '" class="transport-select" data-role-id="' . esc_attr($role_id) . '">
                                 <option value="">-- Vyberte auto --</option>';
@@ -715,6 +717,7 @@ function my_team_plugin_render_settings_page() {
 function my_team_plugin_register_settings() {
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_google_maps_api_key');
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_openrouteservice_api_key');
+    register_setting('my_team_plugin_settings_group', 'my_team_plugin_openai_api_key'); // Přidání OpenAI API klíče
 
     add_settings_section(
         'my_team_plugin_settings_section',
@@ -738,6 +741,14 @@ function my_team_plugin_register_settings() {
         'my-team-plugin-settings',
         'my_team_plugin_settings_section'
     );
+
+    add_settings_field(
+        'my_team_plugin_openai_api_key',
+        'OpenAI API Key',
+        'my_team_plugin_openai_api_key_callback',
+        'my-team-plugin-settings',
+        'my_team_plugin_settings_section'
+    );
 }
 add_action('admin_init', 'my_team_plugin_register_settings');
 
@@ -752,6 +763,13 @@ function my_team_plugin_openrouteservice_api_key_callback() {
     $api_key = get_option('my_team_plugin_openrouteservice_api_key');
     ?>
     <input type="text" name="my_team_plugin_openrouteservice_api_key" value="<?php echo esc_attr($api_key); ?>" size="50">
+    <?php
+}
+
+function my_team_plugin_openai_api_key_callback() {
+    $api_key = get_option('my_team_plugin_openai_api_key');
+    ?>
+    <input type="text" name="my_team_plugin_openai_api_key" value="<?php echo esc_attr($api_key); ?>" size="50">
     <?php
 }
 

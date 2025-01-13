@@ -118,11 +118,16 @@ jQuery(document).ready(function($) {
                         console.log('AJAX response:', response);
                         if (response.success) {
                             $('.transport-select').each(function() {
-                                $(this).val(response.data);
+                                $(this).val(response.data.route);
+                            });
+                            $('.pickup-time').each(function(index) {
+                                $(this).text(response.data.pickup_times[index]);
                             });
                             alert('Optimalizace dopravy byla dokončena.');
                         } else {
-                            alert('Chyba při optimalizaci dopravy: ' + response.data);
+                            console.error('Error:', response.error);
+                            console.log('Raw response:', response.raw_response);
+                            alert('Chyba při optimalizaci dopravy: ' + response.error);
                         }
                     }).fail(function(xhr, status, error) {
                         console.error('AJAX error:', status, error);
@@ -267,8 +272,19 @@ jQuery(document).ready(function($) {
 
     function initializeAutocomplete(inputId, mapId) {
         var input = document.getElementById(inputId);
+        if (!input) {
+            console.error('Element with id "' + inputId + '" not found.');
+            return;
+        }
+
         var autocomplete = new google.maps.places.Autocomplete(input);
-        var map = new google.maps.Map(document.getElementById(mapId), {
+        var mapElement = document.getElementById(mapId);
+        if (!mapElement) {
+            console.error('Element with id "' + mapId + '" not found.');
+            return;
+        }
+
+        var map = new google.maps.Map(mapElement, {
             center: { lat: -34.397, lng: 150.644 },
             zoom: 8
         });
@@ -308,11 +324,19 @@ jQuery(document).ready(function($) {
         });
     }
 
-    // Initialize autocomplete for all address inputs
-    initializeAutocomplete('pickup_location', 'map');
-    initializeAutocomplete('role_default_pickup_location', 'map-role-default');
-    initializeAutocomplete('kseft_location', 'map-kseft');
-    initializeAutocomplete('kseft_location_wp', 'map-kseft-wp');
+    // Initialize autocomplete for all address inputs if they exist
+    if (document.getElementById('pickup_location')) {
+        initializeAutocomplete('pickup_location', 'map');
+    }
+    if (document.getElementById('role_default_pickup_location')) {
+        initializeAutocomplete('role_default_pickup_location', 'map-role-default');
+    }
+    if (document.getElementById('kseft_location')) {
+        initializeAutocomplete('kseft_location', 'map');
+    }
+    if (document.getElementById('kseft_location_wp')) {
+        initializeAutocomplete('kseft_location_wp', 'map-kseft-wp');
+    }
 
     $('#optimize-transport-button').on('click', function() {
         var locations = [
