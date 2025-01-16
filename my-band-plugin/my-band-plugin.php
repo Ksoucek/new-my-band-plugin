@@ -8,14 +8,23 @@ Author: Vaše Jméno
 
 error_log('Muzikantské kšefty plugin loaded');
 
+$autoload_path = plugin_dir_path(__FILE__) . 'vendor/autoload.php';
+if (file_exists($autoload_path)) {
+    require_once $autoload_path; // Načtení knihovny Google API PHP Client
+} else {
+    error_log('Autoload file not found: ' . $autoload_path);
+}
+
 require_once plugin_dir_path(__FILE__) . 'includes/transport-optimization.php';
+require_once plugin_dir_path(__FILE__) . 'includes/google-calendar.php'; // Načtení souboru pro Google Kalendář
 
 function my_team_plugin_enqueue_scripts() {
     wp_enqueue_script('my-team-plugin-script', plugins_url('/js/my-team-plugin.js', __FILE__), array('jquery'), '1.0', true);
     wp_localize_script('my-team-plugin-script', 'myTeamPlugin', array(
         'ajax_url' => admin_url('admin-ajax.php'),
         'post_id' => get_the_ID(), // Přidání post_id do lokalizovaného skriptu
-        'api_key' => get_option('my_team_plugin_openrouteservice_api_key') // Přidání API klíče do lokalizovaného skriptu
+        'api_key' => get_option('my_team_plugin_openrouteservice_api_key'), // Přidání API klíče do lokalizovaného skriptu
+        'rest_url' => rest_url('transport-ai/v1/add-to-calendar') // Přidání REST URL do lokalizovaného skriptu
      ));
     wp_enqueue_script('google-maps', 'https://maps.googleapis.com/maps/api/js?key=' . get_option('my_team_plugin_google_maps_api_key') . '&libraries=places', null, null, true);
     wp_enqueue_style('my-team-plugin-style', plugins_url('/css/my-team-plugin.css', __FILE__));
@@ -289,7 +298,7 @@ function my_team_plugin_render_meta_box($post) {
     ?>
     <label for="kseft_location">Lokace (Google Maps URL):</label>
     <input type="text" name="kseft_location" id="kseft_location_wp" value="<?php echo esc_attr($location); ?>" size="25" />
-    <div id="map-kseft-wp"></div>
+    <div id="map-kseft-wp"></div> <!-- Změna ID elementu mapy -->
     <br><br>
     <label for="kseft_meeting_time">Čas srazu:</label>
     <input type="text" name="kseft_meeting_time" id="kseft_meeting_time" value="<?php echo esc_attr($meeting_time); ?>" size="25" />
@@ -412,8 +421,8 @@ function my_team_plugin_display_kseft_details($content) {
             $custom_content .= '<h4>Obsazení:</h4>';
             $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
             if ($roles) {
-                $custom_content .= '<table>';
-                $custom_content .= '<thead><tr><th>Název role</th><th>Potvrzení</th><th>Místo vyzvednutí</th><th>Čas vyzvednutí</th><th>Doprava</th><th>Akce</th></tr></thead>';
+                $custom_content .= '<table id="obsazeni-table">';
+                $custom_content .= '<thead><tr><th>Název role</th><th>Potvrzení</th><th>Místo vyzvednutí</th><th>Čas vyzvednutí</th><th class="sortable">Doprava</th><th class="sortable">Akce</th></tr></thead>';
                 $custom_content .= '<tbody>';
                 foreach ($roles as $role_id) {
                     $role = get_post($role_id);
@@ -439,7 +448,7 @@ function my_team_plugin_display_kseft_details($content) {
                         $custom_content .= '<td>' . esc_html($role->post_title) . '</td>';
                         $custom_content .= '<td>' . $confirmation_text . '</td>';
                         $custom_content .= '<td>' . esc_html($pickup_location) . '</td>';
-                        $custom_content .= '<td class="pickup-time">' . esc_html($pickup_time) . '</td>'; // Přidání nového sloupce
+                        $custom_content .= '<td class="pickup-time"><input type="text" name="pickup_time_' . esc_attr($role_id) . '" value="' . esc_attr($pickup_time) . '" class="pickup-time-input" data-role-id="' . esc_attr($role_id) . '"></td>'; // Přidání editovatelného pole
                         $custom_content .= '<td>
                             <select name="transport_' . esc_attr($role_id) . '" class="transport-select" data-role-id="' . esc_attr($role_id) . '">
                                 <option value="">-- Vyberte auto --</option>';
@@ -467,6 +476,9 @@ function my_team_plugin_display_kseft_details($content) {
         // Přidání tlačítek pro ruční spuštění optimalizace dopravy a testování API
         $custom_content .= '<button id="optimize-transport-button" class="button">Optimalizovat dopravu</button>';
         $custom_content .= '<button id="test-api-button" class="button">Test API</button>';
+
+        // Přidání tlačítka pro přidání události do Google Kalendáře
+        $custom_content .= '<button id="add-to-calendar-button" class="button">Přidat do Google Kalendáře</button>';
 
         // Přidání modálního okna pro potvrzení účasti
         $custom_content .= '<div id="role-confirmation-modal" style="display: none;">
@@ -503,6 +515,25 @@ function my_team_plugin_display_kseft_details($content) {
     return $content;
 }
 add_filter('the_content', 'my_team_plugin_display_kseft_details');
+
+function my_team_plugin_save_pickup_time() {
+    $post_id = intval($_POST['post_id']);
+    $role_id = intval($_POST['role_id']);
+    $pickup_time = sanitize_text_field($_POST['pickup_time']);
+
+    // Kontrola formátu času (hh:mm)
+    if (!preg_match('/^\d{2}:\d{2}$/', $pickup_time)) {
+        echo 'Neplatný formát času. Použijte formát hh:mm.';
+        wp_die();
+    }
+
+    update_post_meta($post_id, 'pickup_time_' . $role_id, $pickup_time);
+
+    echo 'Čas vyzvednutí byl uložen.';
+    wp_die();
+}
+add_action('wp_ajax_save_pickup_time', 'my_team_plugin_save_pickup_time');
+add_action('wp_ajax_nopriv_save_pickup_time', 'my_team_plugin_save_pickup_time');
 
 function my_team_plugin_get_adjacent_kseft($current_date, $direction = 'next') {
     $order = ($direction === 'next') ? 'ASC' : 'DESC';
@@ -718,6 +749,7 @@ function my_team_plugin_register_settings() {
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_google_maps_api_key');
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_openrouteservice_api_key');
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_openai_api_key'); // Přidání OpenAI API klíče
+    register_setting('my_team_plugin_settings_group', 'my_team_plugin_google_calendar_api_key'); // Přidání Google Calendar API klíče
 
     add_settings_section(
         'my_team_plugin_settings_section',
@@ -749,6 +781,14 @@ function my_team_plugin_register_settings() {
         'my-team-plugin-settings',
         'my_team_plugin_settings_section'
     );
+
+    add_settings_field(
+        'my_team_plugin_google_calendar_api_key',
+        'Google Calendar API Key',
+        'my_team_plugin_google_calendar_api_key_callback',
+        'my-team-plugin-settings',
+        'my_team_plugin_settings_section'
+    );
 }
 add_action('admin_init', 'my_team_plugin_register_settings');
 
@@ -770,6 +810,13 @@ function my_team_plugin_openai_api_key_callback() {
     $api_key = get_option('my_team_plugin_openai_api_key');
     ?>
     <input type="text" name="my_team_plugin_openai_api_key" value="<?php echo esc_attr($api_key); ?>" size="50">
+    <?php
+}
+
+function my_team_plugin_google_calendar_api_key_callback() {
+    $api_key = get_option('my_team_plugin_google_calendar_api_key');
+    ?>
+    <input type="text" name="my_team_plugin_google_calendar_api_key" value="<?php echo esc_attr($api_key); ?>" size="50">
     <?php
 }
 
@@ -806,4 +853,15 @@ function my_team_plugin_load_template($template) {
 }
 add_filter('template_include', 'my_team_plugin_load_template');
 
+function my_team_plugin_test_openai_api() {
+    $result = test_openai_api();
+
+    if (isset($result['error'])) {
+        wp_send_json_error(['error' => $result['error']]);
+    }
+
+    wp_send_json_success(['response' => $result['response']]);
+}
+add_action('wp_ajax_test_openai_api', 'my_team_plugin_test_openai_api');
+add_action('wp_ajax_nopriv_test_openai_api', 'my_team_plugin_test_openai_api');
 ?>
