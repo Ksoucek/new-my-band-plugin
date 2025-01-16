@@ -13,6 +13,9 @@ if (file_exists($autoload_path)) {
     require_once $autoload_path; // Načtení knihovny Google API PHP Client
 } else {
     error_log('Autoload file not found: ' . $autoload_path);
+    add_action('admin_notices', function() {
+        echo '<div class="notice notice-error"><p>Autoload file not found. Please run <code>composer install</code>.</p></div>';
+    });
 }
 
 require_once plugin_dir_path(__FILE__) . 'includes/transport-optimization.php';
@@ -24,7 +27,7 @@ function my_team_plugin_enqueue_scripts() {
         'ajax_url' => admin_url('admin-ajax.php'),
         'post_id' => get_the_ID(), // Přidání post_id do lokalizovaného skriptu
         'api_key' => get_option('my_team_plugin_openrouteservice_api_key'), // Přidání API klíče do lokalizovaného skriptu
-        'rest_url' => rest_url('transport-ai/v1/add-to-calendar') // Přidání REST URL do lokalizovaného skriptu
+        'rest_url' => rest_url('google-calendar/v1/add-to-calendar') // Přidání REST URL do lokalizovaného skriptu
      ));
     wp_enqueue_script('google-maps', 'https://maps.googleapis.com/maps/api/js?key=' . get_option('my_team_plugin_google_maps_api_key') . '&libraries=places', null, null, true);
     wp_enqueue_style('my-team-plugin-style', plugins_url('/css/my-team-plugin.css', __FILE__));
@@ -414,7 +417,8 @@ function my_team_plugin_display_kseft_details($content) {
         $custom_content .= '<h3>Detaily Kšeftu</h3>';
         $custom_content .= '<p><strong>Lokace:</strong> ' . esc_html($location) . '</p>';
         $custom_content .= '<p><strong>Čas srazu:</strong> ' . esc_html($meeting_time) . '</p>';
-        $custom_content .= '<p><strong>Datum kšeftu:</strong> ' . esc_html($event_date) . '</p>';
+        $formatted_date = date_i18n('D d.m.Y', strtotime($event_date));
+        $custom_content .= '<p><strong>Datum kšeftu:</strong> ' . esc_html($formatted_date) . '</p>';
         $custom_content .= '<p><strong>Status:</strong> ' . esc_html($status) . '</p>';
         $custom_content .= '<p><strong>Oblečení:</strong> ' . esc_html($clothing) . '</p>';
         if ($obsazeni_template) {
@@ -514,7 +518,6 @@ function my_team_plugin_display_kseft_details($content) {
     }
     return $content;
 }
-add_filter('the_content', 'my_team_plugin_display_kseft_details');
 
 function my_team_plugin_save_pickup_time() {
     $post_id = intval($_POST['post_id']);
