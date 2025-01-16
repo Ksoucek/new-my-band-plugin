@@ -1,0 +1,17 @@
+{
+    "name": "yourname/my-band-plugin",
+    "description": "Umožňuje uživatelům vytvářet a spravovat týmy, přidávat členy a plánovat události.",
+    "type": "project",
+    "require": {
+        "google/apiclient": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "MyBandPlugin\\": "includes/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist"
+    }
+}

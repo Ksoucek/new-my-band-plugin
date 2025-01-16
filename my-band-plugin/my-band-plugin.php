@@ -11,11 +11,6 @@ error_log('Muzikantské kšefty plugin loaded');
 $autoload_path = plugin_dir_path(__FILE__) . 'vendor/autoload.php';
 if (file_exists($autoload_path)) {
     require_once $autoload_path; // Načtení knihovny Google API PHP Client
-} else {
-    error_log('Autoload file not found: ' . $autoload_path);
-    add_action('admin_notices', function() {
-        echo '<div class="notice notice-error"><p>Autoload file not found. Please run <code>composer install</code>.</p></div>';
-    });
 }
 
 require_once plugin_dir_path(__FILE__) . 'includes/transport-optimization.php';
@@ -518,6 +513,7 @@ function my_team_plugin_display_kseft_details($content) {
     }
     return $content;
 }
+add_filter('the_content', 'my_team_plugin_display_kseft_details');
 
 function my_team_plugin_save_pickup_time() {
     $post_id = intval($_POST['post_id']);
