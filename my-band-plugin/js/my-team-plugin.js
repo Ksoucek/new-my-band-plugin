@@ -1,4 +1,6 @@
 jQuery(document).ready(function($) {
+    console.log('JavaScript file loaded');
+
     $('#add-member-button').click(function() {
         var teamId = $('#team-id').val();
         var memberName = $('#member-name').val();
@@ -38,6 +40,7 @@ jQuery(document).ready(function($) {
         $('#substitute-field').hide();
         $('#pickup-location-field').hide();
         $('#default-player-field').hide();
+        $('#default-pickup-location-field').show(); // Přidání pole "Výchozí místo vyzvednutí"
         $('#role-confirmation-modal').show();
     });
 
@@ -140,18 +143,20 @@ jQuery(document).ready(function($) {
 
     $('#test-api-button').on('click', function() {
         $.post(myTeamPlugin.ajax_url, {
-            action: 'test_api'
+            action: 'test_openai_api'
         }, function(response) {
             console.log('API Test response:', response);
             if (response.success) {
-                console.log('API Test data:', response.data);
+                console.log('API Test data:', response.response);
                 alert('API Test proběhl úspěšně. Výsledek je v konzoli.');
             } else {
-                alert('Chyba při testování API: ' + response.data);
+                console.error('API Test error:', response.error);
+                alert('Chyba při testování API: ' + response.error);
             }
         }).fail(function(xhr, status, error) {
             console.error('API Test error:', status, error);
             console.error('API Test response:', xhr.responseText);
+            alert('Chyba při testování API: ' + error);
         });
     });
 
@@ -210,6 +215,35 @@ jQuery(document).ready(function($) {
         };
         $.post(myTeamPlugin.ajax_url, data, function(response) {
             console.log('Transport saved: ' + transport);
+        });
+    });
+
+    $('.pickup-time-input').on('change', function() {
+        var roleId = $(this).data('role-id');
+        var pickupTime = $(this).val();
+
+        // Kontrola formátu času (hh:mm)
+        if (!/^\d{2}:\d{2}$/.test(pickupTime)) {
+            alert('Neplatný formát času. Použijte formát hh:mm.');
+            return;
+        }
+
+        // Kontrola hodnoty minut
+        var timeParts = pickupTime.split(':');
+        var hours = parseInt(timeParts[0], 10);
+        var minutes = parseInt(timeParts[1], 10);
+        if (minutes > 59) {
+            alert('Neplatná hodnota minut. Minuty musí být mezi 00 a 59.');
+            return;
+        }
+
+        $.post(myTeamPlugin.ajax_url, {
+            action: 'save_pickup_time',
+            post_id: myTeamPlugin.post_id,
+            role_id: roleId,
+            pickup_time: pickupTime
+        }, function(response) {
+            console.log('Pickup time saved:', response);
         });
     });
 
@@ -359,5 +393,120 @@ jQuery(document).ready(function($) {
                 console.error('Chyba při optimalizaci jízdy:', error);
             }
         });
+    });
+
+    $('#add-to-calendar-button').on('click', function() {
+        console.log('Add to Calendar button clicked');
+        var eventDate = $('#kseft_event_date').val();
+        var meetingTime = $('#kseft_meeting_time').val();
+        var kseftName = $('#kseft_name').val();
+        var kseftLocation = $('#kseft_location').val();
+
+        console.log('Event Date:', eventDate);
+        console.log('Meeting Time:', meetingTime);
+        console.log('Kseft Name:', kseftName);
+        console.log('Kseft Location:', kseftLocation);
+
+        if (!eventDate || !meetingTime || !kseftName || !kseftLocation) {
+            alert('Prosím vyplňte všechny potřebné údaje (název, datum, čas a místo kšeftu).');
+            return;
+        }
+
+        var eventDetails = {
+            summary: kseftName,
+            location: kseftLocation,
+            start: {
+                dateTime: eventDate + 'T' + meetingTime + ':00',
+                timeZone: 'Europe/Prague'
+            },
+            end: {
+                dateTime: eventDate + 'T' + (parseInt(meetingTime.split(':')[0]) + 2) + ':' + meetingTime.split(':')[1] + ':00', // Assuming the event lasts 2 hours
+                timeZone: 'Europe/Prague'
+            }
+        };
+
+        console.log('Event details:', eventDetails);
+
+        $.ajax({
+            url: myTeamPlugin.rest_url,
+            method: 'POST',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', myTeamPlugin.nonce);
+            },
+            data: JSON.stringify({
+                event_details: eventDetails
+            }),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    console.log('Event added to Google Calendar:', response.event_id);
+                    alert('Událost byla úspěšně přidána do Google Kalendáře.');
+                } else {
+                    console.error('Error adding event to Google Calendar:', response.error);
+                    alert('Chyba při přidávání události do Google Kalendáře.');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX error:', error);
+                console.error('Response:', xhr.responseText);
+                alert('Chyba při komunikaci se serverem.');
+            }
+        });
+    });
+
+    // Přidání řazení na všech sloupcích
+    $('#obsazeni-table thead th').each(function() {
+        $(this).addClass('sortable');
+    });
+
+    $('#obsazeni-table .sortable').on('click', function() {
+        var table = $(this).parents('table').eq(0);
+        var rows = table.find('tr:gt(0)').toArray().sort(comparer($(this).index()));
+        this.asc = !this.asc;
+        if (!this.asc) {
+            rows = rows.reverse();
+        }
+        for (var i = 0; i < rows.length; i++) {
+            table.append(rows[i]);
+        }
+    });
+
+    function comparer(index) {
+        return function(a, b) {
+            var valA = getCellValue(a, index),
+                valB = getCellValue(b, index);
+            if (index === 4) { // Kontrola sloupce "Doprava"
+                return valA.localeCompare(valB);
+            }
+            return $.isNumeric(valA) && $.isNumeric(valB) ? valA - valB : valA.localeCompare(valB);
+        };
+    }
+
+    function getCellValue(row, index) {
+        return $(row).children('td').eq(index).text();
+    }
+
+    // Přidání filtrování
+    $('#obsazeni-table thead th').each(function() {
+        var title = $(this).text();
+        $(this).append('<br><input type="text" class="column-filter" placeholder="Filtr ' + title + '" />');
+    });
+
+    $('.column-filter').on('keyup change', function() {
+        var index = $(this).parent().index();
+        var filter = $(this).val().toLowerCase();
+        $('#obsazeni-table tbody tr').filter(function() {
+            $(this).toggle($(this).children('td').eq(index).text().toLowerCase().indexOf(filter) > -1);
+        });
+    });
+
+    $('#role-confirmation-modal').css({
+        'width': '50%', // Zvětšení šířky modálního okna
+        'max-width': '600px', // Nastavení maximální šířky
+        'margin': '0 auto' // Vycentrování modálního okna
+    });
+
+    $('#role-confirmation-modal .modal-content').css({
+        'padding': '20px' // Zvýšení vnitřního odsazení
     });
 });
