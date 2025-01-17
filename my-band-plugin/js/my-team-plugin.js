@@ -408,7 +408,7 @@ jQuery(document).ready(function($) {
                 var meetingTime = response.data.meeting_time;
                 var kseftName = response.data.kseft_name;
                 var kseftLocation = response.data.kseft_location;
-                var duration = response.data.duration || 2; // Předpokládaná délka v hodinách, výchozí hodnota je 2 hodiny
+                var kseft_duration = response.data.kseft_duration || 2; // Předpokládaná délka v hodinách, výchozí hodnota je 2 hodiny
 
                 var eventDetails = {
                     summary: kseftName,
@@ -420,7 +420,7 @@ jQuery(document).ready(function($) {
                 if (meetingTime) {
                     // Formátování datumu a času
                     var startDateTime = new Date(eventDate + 'T' + meetingTime + ':00').toISOString();
-                    var endDateTime = new Date(new Date(eventDate + 'T' + meetingTime + ':00').getTime() + duration * 60 * 60 * 1000).toISOString();
+                    var endDateTime = new Date(new Date(eventDate + 'T' + meetingTime + ':00').getTime() + kseft_duration * 60 * 60 * 1000).toISOString();
 
                     eventDetails.start.dateTime = startDateTime;
                     eventDetails.end.dateTime = endDateTime;

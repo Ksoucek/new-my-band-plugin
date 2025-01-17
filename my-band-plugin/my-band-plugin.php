@@ -292,7 +292,7 @@ function my_team_plugin_render_meta_box($post) {
     $location = get_post_meta($post->ID, 'kseft_location', true);
     $meeting_time = get_post_meta($post->ID, 'kseft_meeting_time', true);
     $event_date = get_post_meta($post->ID, 'kseft_event_date', true);
-    $duration = get_post_meta($post->ID, 'kseft_duration', true); // Přidání pole pro předpokládanou délku
+    $kseft_duration = get_post_meta($post->ID, 'kseft_duration', true); // Přidání pole pro předpokládanou délku
     $status = get_post_meta($post->ID, 'kseft_status', true); // Přidání pole pro stav
     $clothing = get_post_meta($post->ID, 'kseft_clothing', true); // Přidání pole pro oblečení
     ?>
@@ -310,7 +310,7 @@ function my_team_plugin_render_meta_box($post) {
         </div>
         <div style="flex: 1;">
             <label for="kseft_duration">Předpokládaná délka (v hodinách):</label>
-            <input type="number" name="kseft_duration" id="kseft_duration" value="<?php echo esc_attr($duration); ?>" size="25" />
+            <input type="number" name="kseft_duration" id="kseft_duration" value="<?php echo esc_attr($kseft_duration); ?>" size="25" />
         </div>
     </div>
     <br><br>
@@ -400,6 +400,7 @@ function my_team_plugin_display_kseft_details($content) {
         $location = get_post_meta($kseft_id, 'kseft_location', true);
         $meeting_time = get_post_meta($kseft_id, 'kseft_meeting_time', true);
         $event_date = get_post_meta($kseft_id, 'kseft_event_date', true);
+        $kseft_duration = get_post_meta($kseft_id, 'kseft_duration', true); // Přidání pole pro předpokládanou délku
         $status = get_post_meta($kseft_id, 'kseft_status', true);
         $clothing = get_post_meta($kseft_id, 'kseft_clothing', true);
         $obsazeni_template_id = get_post_meta($kseft_id, 'kseft_obsazeni_template', true);
@@ -427,6 +428,7 @@ function my_team_plugin_display_kseft_details($content) {
         $custom_content .= '<p><strong>Čas srazu:</strong> ' . esc_html($meeting_time) . '</p>';
         $formatted_date = date_i18n('D d.m.Y', strtotime($event_date));
         $custom_content .= '<p><strong>Datum kšeftu:</strong> ' . esc_html($formatted_date) . '</p>';
+        $custom_content .= '<p><strong>Předpokládaná délka:</strong> ' . esc_html($kseft_duration) . ' hodin</p>'; // Přidání délky kšeftu
         $custom_content .= '<p><strong>Status:</strong> ' . esc_html($status) . '</p>';
         $custom_content .= '<p><strong>Oblečení:</strong> ' . esc_html($clothing) . '</p>';
         if ($obsazeni_template) {
@@ -880,7 +882,8 @@ add_action('wp_ajax_test_openai_api', 'my_team_plugin_test_openai_api');
 add_action('wp_ajax_nopriv_test_openai_api', 'my_team_plugin_test_openai_api');
 
 function my_team_plugin_get_event_details() {
-    $post_id = intval($_POST['post_id']);
+    $post_id = intval($_POST['post_id']);                 
+    $kseft_duration = get_post_meta($post_id, 'kseft_duration', true); // Přidání pole pro předpokládanou délku           
     $event_date = get_post_meta($post_id, 'kseft_event_date', true);
     $meeting_time = get_post_meta($post_id, 'kseft_meeting_time', true);
     $kseft_name = get_the_title($post_id);
@@ -890,7 +893,8 @@ function my_team_plugin_get_event_details() {
         'event_date' => $event_date,
         'meeting_time' => $meeting_time,
         'kseft_name' => $kseft_name,
-        'kseft_location' => $kseft_location
+        'kseft_location' => $kseft_location,
+        'kseft_duration' => $kseft_duration
     );
 
     wp_send_json_success($response);
