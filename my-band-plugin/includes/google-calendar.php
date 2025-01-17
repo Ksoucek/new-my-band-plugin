@@ -22,16 +22,6 @@ add_action('rest_api_init', function () {
     ]);
 });
 
-// Přidání REST API endpointu pro ověření funkčnosti API
-add_action('rest_api_init', function () {
-    error_log_with_timestamp('Registering REST API endpoint: /test-api');
-    register_rest_route('google-calendar/v1', '/test-api', [
-        'methods'  => 'GET',
-        'callback' => 'handle_test_api_request',
-        'permission_callback' => '__return_true', // Změňte podle potřeby
-    ]);
-});
-
 function handle_add_to_calendar_request(WP_REST_Request $request) {
     error_log_with_timestamp('handle_add_to_calendar_request called');
     $event_details = $request->get_param('event_details');
@@ -40,6 +30,10 @@ function handle_add_to_calendar_request(WP_REST_Request $request) {
         error_log_with_timestamp('Missing parameter: event_details');
         return new WP_REST_Response(['error' => 'Missing parameter: event_details'], 400);
     }
+
+    // Dynamicky generujeme aktuální datum a čas
+    $event_details['start']['dateTime'] = date('c', strtotime('today 10:00'));
+    $event_details['end']['dateTime'] = date('c', strtotime('today 11:00'));
 
     error_log_with_timestamp('Event details received: ' . json_encode($event_details));
 
@@ -80,9 +74,9 @@ function add_event_to_google_calendar($event_details) {
     $event = new Google_Service_Calendar_Event($event_details);
 
     try {
-        $calendarId = 'primary';
+        $calendarId = 'olo0v28necdv27n6mg7psud2dc@group.calendar.google.com';
         $event = $service->events->insert($calendarId, $event);
-        error_log_with_timestamp('Event added to Google Calendar: ' . $event->getId());
+        error_log_with_timestamp('Event added to Google Calendar: ' . json_encode($event));
         return [
             'success' => true,
             'event_id' => $event->getId()
@@ -114,10 +108,6 @@ function get_last_error_from_log() {
 function handle_get_last_error_request() {
     $last_error = get_last_error_from_log();
     return new WP_REST_Response(['last_error' => $last_error], 200);
-}
-
-function handle_test_api_request() {
-    return new WP_REST_Response(['message' => 'API is working'], 200);
 }
 
 // Přidání funkce pro logování s časovou značkou
