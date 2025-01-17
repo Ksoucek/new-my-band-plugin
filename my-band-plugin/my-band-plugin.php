@@ -22,7 +22,8 @@ function my_team_plugin_enqueue_scripts() {
         'ajax_url' => admin_url('admin-ajax.php'),
         'post_id' => get_the_ID(), // Přidání post_id do lokalizovaného skriptu
         'api_key' => get_option('my_team_plugin_openrouteservice_api_key'), // Přidání API klíče do lokalizovaného skriptu
-        'rest_url' => rest_url('google-calendar/v1/add-to-calendar') // Přidání REST URL do lokalizovaného skriptu
+        'rest_url' => rest_url('google-calendar/v1/add-to-calendar'), // Přidání REST URL do lokalizovaného skriptu
+        'nonce' => wp_create_nonce('wp_rest') // Přidání nonce do lokalizovaného skriptu
      ));
     wp_enqueue_script('google-maps', 'https://maps.googleapis.com/maps/api/js?key=' . get_option('my_team_plugin_google_maps_api_key') . '&libraries=places', null, null, true);
     wp_enqueue_style('my-team-plugin-style', plugins_url('/css/my-team-plugin.css', __FILE__));
@@ -291,6 +292,7 @@ function my_team_plugin_render_meta_box($post) {
     $location = get_post_meta($post->ID, 'kseft_location', true);
     $meeting_time = get_post_meta($post->ID, 'kseft_meeting_time', true);
     $event_date = get_post_meta($post->ID, 'kseft_event_date', true);
+    $duration = get_post_meta($post->ID, 'kseft_duration', true); // Přidání pole pro předpokládanou délku
     $status = get_post_meta($post->ID, 'kseft_status', true); // Přidání pole pro stav
     $clothing = get_post_meta($post->ID, 'kseft_clothing', true); // Přidání pole pro oblečení
     ?>
@@ -301,8 +303,16 @@ function my_team_plugin_render_meta_box($post) {
     <label for="kseft_meeting_time">Čas srazu:</label>
     <input type="text" name="kseft_meeting_time" id="kseft_meeting_time" value="<?php echo esc_attr($meeting_time); ?>" size="25" />
     <br><br>
-    <label for="kseft_event_date">Datum kšeftu:</label>
-    <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($event_date); ?>" size="25" />
+    <div style="display: flex; justify-content: space-between;">
+        <div style="flex: 1; margin-right: 10px;">
+            <label for="kseft_event_date">Datum kšeftu:</label>
+            <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($event_date); ?>" size="25" />
+        </div>
+        <div style="flex: 1;">
+            <label for="kseft_duration">Předpokládaná délka (v hodinách):</label>
+            <input type="number" name="kseft_duration" id="kseft_duration" value="<?php echo esc_attr($duration); ?>" size="25" />
+        </div>
+    </div>
     <br><br>
     <label for="kseft_status">Stav kšeftu:</label>
     <select name="kseft_status" id="kseft_status">
@@ -328,6 +338,9 @@ function my_team_plugin_save_meta_box_data($post_id) {
     }
     if (array_key_exists('kseft_event_date', $_POST)) {
         update_post_meta($post_id, 'kseft_event_date', sanitize_text_field($_POST['kseft_event_date']));
+    }
+    if (array_key_exists('kseft_duration', $_POST)) { // Uložení pole pro předpokládanou délku
+        update_post_meta($post_id, 'kseft_duration', intval($_POST['kseft_duration']));
     }
     if (array_key_exists('kseft_status', $_POST)) { // Uložení pole pro stav
         update_post_meta($post_id, 'kseft_status', sanitize_text_field($_POST['kseft_status']));
@@ -472,12 +485,14 @@ function my_team_plugin_display_kseft_details($content) {
         // Přidání tlačítka pro úpravu kšeftu
         $custom_content .= '<a href="' . add_query_arg('kseft_id', $kseft_id, site_url('/manage-kseft')) . '" class="button">Upravit Kšeft</a>';
 
-        // Přidání tlačítek pro ruční spuštění optimalizace dopravy a testování API
-        $custom_content .= '<button id="optimize-transport-button" class="button">Optimalizovat dopravu</button>';
-        $custom_content .= '<button id="test-api-button" class="button">Test API</button>';
+        // Zakomentování tlačítek pro ruční spuštění optimalizace dopravy a testování API
+        // $custom_content .= '<button id="optimize-transport-button" class="button">Optimalizovat dopravu</button>';
+        // $custom_content .= '<button id="test-api-button" class="button">Test API</button>';
 
         // Přidání tlačítka pro přidání události do Google Kalendáře
         $custom_content .= '<button id="add-to-calendar-button" class="button">Přidat do Google Kalendáře</button>';
+        // Odebrání tlačítka pro generování JSON
+        // $custom_content .= '<button id="generate-json-button" class="button">Generovat JSON</button>';
 
         // Přidání modálního okna pro potvrzení účasti
         $custom_content .= '<div id="role-confirmation-modal" style="display: none;">
@@ -863,4 +878,23 @@ function my_team_plugin_test_openai_api() {
 }
 add_action('wp_ajax_test_openai_api', 'my_team_plugin_test_openai_api');
 add_action('wp_ajax_nopriv_test_openai_api', 'my_team_plugin_test_openai_api');
+
+function my_team_plugin_get_event_details() {
+    $post_id = intval($_POST['post_id']);
+    $event_date = get_post_meta($post_id, 'kseft_event_date', true);
+    $meeting_time = get_post_meta($post_id, 'kseft_meeting_time', true);
+    $kseft_name = get_the_title($post_id);
+    $kseft_location = get_post_meta($post_id, 'kseft_location', true);
+
+    $response = array(
+        'event_date' => $event_date,
+        'meeting_time' => $meeting_time,
+        'kseft_name' => $kseft_name,
+        'kseft_location' => $kseft_location
+    );
+
+    wp_send_json_success($response);
+}
+add_action('wp_ajax_get_event_details', 'my_team_plugin_get_event_details');
+add_action('wp_ajax_nopriv_get_event_details', 'my_team_plugin_get_event_details');
 ?>

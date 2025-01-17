@@ -397,59 +397,73 @@ jQuery(document).ready(function($) {
 
     $('#add-to-calendar-button').on('click', function() {
         console.log('Add to Calendar button clicked');
-        var eventDate = $('#kseft_event_date').val();
-        var meetingTime = $('#kseft_meeting_time').val();
-        var kseftName = $('#kseft_name').val();
-        var kseftLocation = $('#kseft_location').val();
+        var postId = myTeamPlugin.post_id;
 
-        console.log('Event Date:', eventDate);
-        console.log('Meeting Time:', meetingTime);
-        console.log('Kseft Name:', kseftName);
-        console.log('Kseft Location:', kseftLocation);
+        $.post(myTeamPlugin.ajax_url, {
+            action: 'get_event_details',
+            post_id: postId
+        }, function(response) {
+            if (response.success) {
+                var eventDate = response.data.event_date;
+                var meetingTime = response.data.meeting_time;
+                var kseftName = response.data.kseft_name;
+                var kseftLocation = response.data.kseft_location;
+                var duration = response.data.duration || 2; // Předpokládaná délka v hodinách, výchozí hodnota je 2 hodiny
 
-        if (!eventDate || !meetingTime || !kseftName || !kseftLocation) {
-            alert('Prosím vyplňte všechny potřebné údaje (název, datum, čas a místo kšeftu).');
-            return;
-        }
+                var eventDetails = {
+                    summary: kseftName,
+                    location: kseftLocation,
+                    start: {},
+                    end: {}
+                };
 
-        var eventDetails = {
-            summary: kseftName,
-            location: kseftLocation,
-            start: {
-                dateTime: eventDate + 'T' + meetingTime + ':00',
-                timeZone: 'Europe/Prague'
-            },
-            end: {
-                dateTime: eventDate + 'T' + (parseInt(meetingTime.split(':')[0]) + 2) + ':' + meetingTime.split(':')[1] + ':00', // Assuming the event lasts 2 hours
-                timeZone: 'Europe/Prague'
-            }
-        };
+                if (meetingTime) {
+                    // Formátování datumu a času
+                    var startDateTime = new Date(eventDate + 'T' + meetingTime + ':00').toISOString();
+                    var endDateTime = new Date(new Date(eventDate + 'T' + meetingTime + ':00').getTime() + duration * 60 * 60 * 1000).toISOString();
 
-        console.log('Event details:', eventDetails);
-
-        $.ajax({
-            url: myTeamPlugin.rest_url,
-            method: 'POST',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', myTeamPlugin.nonce);
-            },
-            data: JSON.stringify({
-                event_details: eventDetails
-            }),
-            contentType: 'application/json',
-            success: function(response) {
-                if (response.success) {
-                    console.log('Event added to Google Calendar:', response.event_id);
-                    alert('Událost byla úspěšně přidána do Google Kalendáře.');
+                    eventDetails.start.dateTime = startDateTime;
+                    eventDetails.end.dateTime = endDateTime;
+                    eventDetails.start.timeZone = 'Europe/Prague';
+                    eventDetails.end.timeZone = 'Europe/Prague';
                 } else {
-                    console.error('Error adding event to Google Calendar:', response.error);
-                    alert('Chyba při přidávání události do Google Kalendáře.');
+                    // Nastavení akce jako celodenní
+                    eventDetails.start.date = eventDate;
+                    eventDetails.end.date = eventDate;
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX error:', error);
-                console.error('Response:', xhr.responseText);
-                alert('Chyba při komunikaci se serverem.');
+
+                console.log('Event details:', eventDetails);
+
+                // Původní AJAX volání pro přidání události do Google Kalendáře
+                $.ajax({
+                    url: myTeamPlugin.rest_url,
+                    method: 'POST',
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader('X-WP-Nonce', myTeamPlugin.nonce);
+                    },
+                    data: JSON.stringify({
+                        event_details: eventDetails
+                    }),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        if (response.success) {
+                            console.log('Event added to Google Calendar:', response.event_id);
+                            console.log('Event link:', response.event_link); // Vypiš odkaz do konzole
+                            alert('Událost byla úspěšně přidána do Google Kalendáře.');
+                        } else {
+                            console.error('Error adding event to Google Calendar:', response.error);
+                            alert('Chyba při přidávání události do Google Kalendáře.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX error:', error);
+                        console.error('Response:', xhr.responseText);
+                        alert('Chyba při komunikaci se serverem.');
+                    }
+                });
+            } else {
+                console.error('Error fetching event details:', response.data);
+                alert('Chyba při získávání detailů události.');
             }
         });
     });

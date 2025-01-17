@@ -22,6 +22,22 @@ add_action('rest_api_init', function () {
     ]);
 });
 
+// Přidání funkce pro generování JSON objektu pro vytvoření události
+function generate_event_json($summary, $start_time, $end_time, $location) {
+    $event_details = [
+        'summary' => $summary,
+        'start' => [
+            'dateTime' => date('c', strtotime($start_time)),
+        ],
+        'end' => [
+            'dateTime' => date('c', strtotime($end_time)),
+        ],
+        'location' => $location
+    ];
+
+    return json_encode(['event_details' => $event_details]);
+}
+
 function handle_add_to_calendar_request(WP_REST_Request $request) {
     error_log_with_timestamp('handle_add_to_calendar_request called');
     $event_details = $request->get_param('event_details');
@@ -31,13 +47,22 @@ function handle_add_to_calendar_request(WP_REST_Request $request) {
         return new WP_REST_Response(['error' => 'Missing parameter: event_details'], 400);
     }
 
-    // Dynamicky generujeme aktuální datum a čas
-    $event_details['start']['dateTime'] = date('c', strtotime('today 10:00'));
-    $event_details['end']['dateTime'] = date('c', strtotime('today 11:00'));
+    if (isset($event_details['start']['dateTime']) && isset($event_details['end']['dateTime'])) {
+        // Formátování datumu a času
+        $start_time = $event_details['start']['dateTime'];
+        $end_time = $event_details['end']['dateTime'];
+
+        $event_details['start']['dateTime'] = date('c', strtotime($start_time));
+        $event_details['end']['dateTime'] = date('c', strtotime($end_time));
+    } else {
+        // Nastavení akce jako celodenní
+        $event_details['start']['date'] = $event_details['start']['date'];
+        $event_details['end']['date'] = $event_details['end']['date'];
+    }
 
     error_log_with_timestamp('Event details received: ' . json_encode($event_details));
 
-    if (empty($event_details['summary']) || empty($event_details['start']['dateTime']) || empty($event_details['location'])) {
+    if (empty($event_details['summary']) || empty($event_details['start']) || empty($event_details['location'])) {
         error_log_with_timestamp('Invalid event details: ' . json_encode($event_details));
         return new WP_REST_Response(['error' => 'Invalid event details. Please provide summary, start dateTime, and location.'], 400);
     }
@@ -49,7 +74,10 @@ function handle_add_to_calendar_request(WP_REST_Request $request) {
         return new WP_REST_Response(['error' => $result['error']], 500);
     }
 
-    return new WP_REST_Response(['success' => true, 'event_id' => $result['event_id']], 200);
+    // Generování odkazu na Google Kalendářovou akci
+    $event_link = generate_google_calendar_event_link($result['event_id']);
+
+    return new WP_REST_Response(['success' => true, 'event_id' => $result['event_id'], 'event_link' => $event_link], 200);
 }
 
 // Přidání funkce pro přidání události do Google Kalendáře
@@ -88,6 +116,12 @@ function add_event_to_google_calendar($event_details) {
             'details' => $e->getMessage()
         ];
     }
+}
+
+// Přidání funkce pro generování odkazu na Google Kalendářovou akci
+function generate_google_calendar_event_link($event_id) {
+    $calendar_id = 'olo0v28necdv27n6mg7psud2dc@group.calendar.google.com';
+    return 'https://calendar.google.com/calendar/event?eid=' . $event_id . '&ctz=Europe/Prague&calendarId=' . $calendar_id;
 }
 
 // Přidání funkce pro získání poslední chyby z logu

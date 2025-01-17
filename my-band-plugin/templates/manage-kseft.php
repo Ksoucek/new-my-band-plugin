@@ -7,6 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kseft_location = sanitize_text_field($_POST['kseft_location']);
     $kseft_meeting_time = sanitize_text_field($_POST['kseft_meeting_time']);
     $kseft_event_date = sanitize_text_field($_POST['kseft_event_date']);
+    $kseft_duration = intval($_POST['kseft_duration']); // Přidání pole pro předpokládanou délku
     $kseft_obsazeni_template = sanitize_text_field($_POST['kseft_obsazeni_template']);
     $kseft_status = sanitize_text_field($_POST['kseft_status']); // Přidání pole pro stav
     $kseft_clothing = sanitize_text_field($_POST['kseft_clothing']); // Přidání pole pro oblečení
@@ -28,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         update_post_meta($kseft_id, 'kseft_location', $kseft_location);
         update_post_meta($kseft_id, 'kseft_meeting_time', $kseft_meeting_time);
         update_post_meta($kseft_id, 'kseft_event_date', $kseft_event_date);
+        update_post_meta($kseft_id, 'kseft_duration', $kseft_duration); // Uložení pole pro předpokládanou délku
         update_post_meta($kseft_id, 'kseft_obsazeni_template', $kseft_obsazeni_template);
         update_post_meta($kseft_id, 'kseft_status', $kseft_status); // Uložení pole pro stav
         update_post_meta($kseft_id, 'kseft_clothing', $kseft_clothing); // Uložení pole pro oblečení
@@ -52,6 +54,7 @@ $kseft_name = $kseft ? $kseft->post_title : '';
 $kseft_location = $kseft ? get_post_meta($kseft_id, 'kseft_location', true) : '';
 $kseft_meeting_time = $kseft ? get_post_meta($kseft_id, 'kseft_meeting_time', true) : '';
 $kseft_event_date = $kseft ? get_post_meta($kseft_id, 'kseft_event_date', true) : '';
+$kseft_duration = $kseft ? get_post_meta($kseft_id, 'kseft_duration', true) : ''; // Načtení pole pro předpokládanou délku
 $kseft_obsazeni_template = $kseft ? get_post_meta($kseft_id, 'kseft_obsazeni_template', true) : '';
 $kseft_status = $kseft ? get_post_meta($kseft_id, 'kseft_status', true) : ''; // Načtení pole pro stav
 $kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : ''; // Načtení pole pro oblečení
@@ -100,6 +103,17 @@ $kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : ''
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+        .form-group-inline {
+            display: flex;
+            justify-content: space-between;
+        }
+        .form-group-inline .form-group {
+            flex: 1;
+            margin-right: 10px;
+        }
+        .form-group-inline .form-group:last-child {
+            margin-right: 0;
+        }
         .form-actions {
             display: flex;
             justify-content: space-between;
@@ -124,6 +138,11 @@ $kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : ''
         .form-actions .button.delete:hover {
             background-color: #c9302c;
         }
+        #map-kseft {
+            width: 100%;
+            height: 400px;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -131,50 +150,62 @@ $kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : ''
         <h1><?php echo $kseft_id ? 'Upravit Kšeft' : 'Vytvořit Kšeft'; ?></h1>
         <form method="POST">
             <input type="hidden" name="kseft_id" value="<?php echo esc_attr($kseft_id); ?>">
-            <div class="form-group">
-                <label for="kseft_name">Název kšeftu:</label>
-                <input type="text" name="kseft_name" id="kseft_name" value="<?php echo esc_attr($kseft_name); ?>" required>
+            <div class="form-group-inline">
+                <div class="form-group">
+                    <label for="kseft_name">Název kšeftu:</label>
+                    <input type="text" name="kseft_name" id="kseft_name" value="<?php echo esc_attr($kseft_name); ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="kseft_status">Stav kšeftu:</label>
+                    <select name="kseft_status" id="kseft_status">
+                        <option value="Rezervace termínu" <?php selected($kseft_status, 'Rezervace termínu'); ?>>Rezervace termínu</option>
+                        <option value="Podepsaná smlouva" <?php selected($kseft_status, 'Podepsaná smlouva'); ?>>Podepsaná smlouva</option>
+                    </select>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="kseft_status">Stav kšeftu:</label>
-                <select name="kseft_status" id="kseft_status">
-                    <option value="Rezervace termínu" <?php selected($kseft_status, 'Rezervace termínu'); ?>>Rezervace termínu</option>
-                    <option value="Podepsaná smlouva" <?php selected($kseft_status, 'Podepsaná smlouva'); ?>>Podepsaná smlouva</option>
-                </select>
+            <div class="form-group-inline">
+                <div class="form-group">
+                    <label for="kseft_event_date">Datum kšeftu:</label>
+                    <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($kseft_event_date); ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="kseft_duration">Předpokládaná délka (v hodinách):</label>
+                    <input type="number" name="kseft_duration" id="kseft_duration" value="<?php echo esc_attr($kseft_duration); ?>" required>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="kseft_event_date">Datum kšeftu:</label>
-                <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($kseft_event_date); ?>" required>
+            <div class="form-group-inline">
+                <div class="form-group">
+                    <label for="kseft_meeting_time">Čas srazu:</label>
+                    <input type="text" name="kseft_meeting_time" id="kseft_meeting_time" value="<?php echo esc_attr($kseft_meeting_time); ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="kseft_obsazeni_template">Šablona obsazení:</label>
+                    <select name="kseft_obsazeni_template" id="kseft_obsazeni_template">
+                        <option value="">-- Vyberte šablonu --</option>
+                        <?php
+                        $templates = get_posts(array('post_type' => 'obsazeni_template', 'numberposts' => -1));
+                        foreach ($templates as $template) {
+                            echo '<option value="' . $template->ID . '"' . selected($kseft_obsazeni_template, $template->ID, false) . '>' . $template->post_title . '</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="kseft_obsazeni_template">Šablona obsazení:</label>
-                <select name="kseft_obsazeni_template" id="kseft_obsazeni_template">
-                    <option value="">-- Vyberte šablonu --</option>
-                    <?php
-                    $templates = get_posts(array('post_type' => 'obsazeni_template', 'numberposts' => -1));
-                    foreach ($templates as $template) {
-                        echo '<option value="' . $template->ID . '"' . selected($kseft_obsazeni_template, $template->ID, false) . '>' . $template->post_title . '</option>';
-                    }
-                    ?>
-                </select>
+            <div class="form-group-inline">
+                <div class="form-group">
+                    <label for="kseft_location">Lokace (Google Maps URL):</label>
+                    <input type="text" name="kseft_location" id="kseft_location" value="<?php echo esc_attr($kseft_location); ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="kseft_clothing">Oblečení:</label>
+                    <select name="kseft_clothing" id="kseft_clothing">
+                        <option value="krojová košile" <?php selected($kseft_clothing, 'krojová košile'); ?>>Krojová košile</option>
+                        <option value="společenská košile" <?php selected($kseft_clothing, 'společenská košile'); ?>>Společenská košile</option>
+                        <option value="Tmavý civil" <?php selected($kseft_clothing, 'Tmavý civil'); ?>>Tmavý civil</option>
+                    </select>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="kseft_location">Lokace (Google Maps URL):</label>
-                <input type="text" name="kseft_location" id="kseft_location" value="<?php echo esc_attr($kseft_location); ?>" required>
-                <div id="map-kseft"></div>
-            </div>
-            <div class="form-group">
-                <label for="kseft_meeting_time">Čas srazu:</label>
-                <input type="text" name="kseft_meeting_time" id="kseft_meeting_time" value="<?php echo esc_attr($kseft_meeting_time); ?>" required>
-            </div>
-            <div class="form-group">
-                <label for="kseft_clothing">Oblečení:</label>
-                <select name="kseft_clothing" id="kseft_clothing">
-                    <option value="krojová košile" <?php selected($kseft_clothing, 'krojová košile'); ?>>Krojová košile</option>
-                    <option value="společenská košile" <?php selected($kseft_clothing, 'společenská košile'); ?>>Společenská košile</option>
-                    <option value="Tmavý civil" <?php selected($kseft_clothing, 'Tmavý civil'); ?>>Tmavý civil</option>
-                </select>
-            </div>
+            <div id="map-kseft"></div>
             <div class="form-actions">
                 <button type="submit" class="button"><?php echo $kseft_id ? 'Upravit Kšeft' : 'Vytvořit Kšeft'; ?></button>
                 <a href="<?php echo site_url('/ksefty'); ?>" class="button">Zpět na seznam kšeftů</a>
