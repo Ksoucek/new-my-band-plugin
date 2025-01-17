@@ -3,7 +3,8 @@
     "description": "Umožňuje uživatelům vytvářet a spravovat týmy, přidávat členy a plánovat události.",
     "type": "project",
     "require": {
-        "google/apiclient": "^2.0"
+        "google/apiclient": "^2.0",
+        "google/apiclient-services": "^0.350"
     },
     "autoload": {
         "psr-4": {

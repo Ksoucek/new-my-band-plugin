@@ -1,7 +1,10 @@
 <?php
 
+require_once dirname(__DIR__, 5) . '/vendor/autoload.php'; // Ujistěte se, že cesta je správná
+
 // Přidání REST API endpointu pro přidání události do Google Kalendáře
 add_action('rest_api_init', function () {
+    error_log_with_timestamp('Registering REST API endpoint: /add-to-calendar');
     register_rest_route('google-calendar/v1', '/add-to-calendar', [
         'methods'  => 'POST',
         'callback' => 'handle_add_to_calendar_request',
@@ -11,9 +14,20 @@ add_action('rest_api_init', function () {
 
 // Přidání REST API endpointu pro získání poslední chyby z logu
 add_action('rest_api_init', function () {
+    error_log_with_timestamp('Registering REST API endpoint: /get-last-error');
     register_rest_route('google-calendar/v1', '/get-last-error', [
         'methods'  => 'GET',
         'callback' => 'handle_get_last_error_request',
+        'permission_callback' => '__return_true', // Změňte podle potřeby
+    ]);
+});
+
+// Přidání REST API endpointu pro ověření funkčnosti API
+add_action('rest_api_init', function () {
+    error_log_with_timestamp('Registering REST API endpoint: /test-api');
+    register_rest_route('google-calendar/v1', '/test-api', [
+        'methods'  => 'GET',
+        'callback' => 'handle_test_api_request',
         'permission_callback' => '__return_true', // Změňte podle potřeby
     ]);
 });
@@ -31,7 +45,7 @@ function handle_add_to_calendar_request(WP_REST_Request $request) {
 
     if (empty($event_details['summary']) || empty($event_details['start']['dateTime']) || empty($event_details['location'])) {
         error_log_with_timestamp('Invalid event details: ' . json_encode($event_details));
-        return new WP_REST_Response(['error' => 'Invalid event details'], 400);
+        return new WP_REST_Response(['error' => 'Invalid event details. Please provide summary, start dateTime, and location.'], 400);
     }
 
     $result = add_event_to_google_calendar($event_details);
@@ -56,16 +70,12 @@ function add_event_to_google_calendar($event_details) {
     }
 
     error_log_with_timestamp('Credentials file found: ' . $credentials_path);
-    error_log_with_timestamp(' BEFORE Google_Client created');
+
     $client = new Google_Client();
-    error_log_with_timestamp('Google_Client created');
     $client->setAuthConfig($credentials_path);
-    error_log_with_timestamp('AuthConfig set');
     $client->addScope(Google_Service_Calendar::CALENDAR);
-    error_log_with_timestamp('Scope added');
 
     $service = new Google_Service_Calendar($client);
-    error_log_with_timestamp('Google_Service_Calendar created');
 
     $event = new Google_Service_Calendar_Event($event_details);
 
@@ -79,7 +89,6 @@ function add_event_to_google_calendar($event_details) {
         ];
     } catch (Exception $e) {
         error_log_with_timestamp('Error adding event to Google Calendar: ' . $e->getMessage());
-        error_log_with_timestamp('Exception details: ' . $e->getTraceAsString());
         return [
             'error' => 'Error adding event to Google Calendar.',
             'details' => $e->getMessage()
@@ -105,6 +114,10 @@ function get_last_error_from_log() {
 function handle_get_last_error_request() {
     $last_error = get_last_error_from_log();
     return new WP_REST_Response(['last_error' => $last_error], 200);
+}
+
+function handle_test_api_request() {
+    return new WP_REST_Response(['message' => 'API is working'], 200);
 }
 
 // Přidání funkce pro logování s časovou značkou
