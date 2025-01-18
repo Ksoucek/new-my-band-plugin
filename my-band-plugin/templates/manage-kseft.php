@@ -265,6 +265,7 @@ if (!$kseft_id) {
                 <?php if ($kseft_id) : ?>
                     <a href="<?php echo add_query_arg('delete_kseft_id', $kseft_id, site_url('/manage-kseft')); ?>" class="button delete" onclick="return confirm('Opravdu chcete smazat tento kšeft?');">Smazat Kšeft</a>
                 <?php endif; ?>
+                <button type="button" class="button" id="add-to-calendar-button">Přidat do Google Kalendáře</button> <!-- Přidání tlačítka -->
             </div>
         </form>
         <?php if ($google_event_id) : ?>
@@ -328,20 +329,24 @@ if (!$kseft_id) {
                 var kseftStatus = $('select[name="kseft_status"]').val();
                 var kseftDescription = $('textarea[name="kseft_description"]').val();
 
-                var startTime = kseftMeetingTime ? kseftEventDate + 'T' + kseftMeetingTime + ':00' : kseftEventDate + 'T00:00:00';
-                var endTime = kseftMeetingTime ? new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration : 24) * 3600 * 1000).toISOString() : kseftEventDate + 'T23:59:59';
-
-                if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
-                    endTime = kseftEventDate + 'T23:59:59';
-                }
-
                 var eventDetails = {
                     summary: kseftName,
                     location: kseftLocation,
-                    description: kseftDescription,
-                    start: startTime,
-                    end: endTime
+                    description: kseftDescription
                 };
+
+                if (kseftMeetingTime) {
+                    var startTime = kseftEventDate + 'T' + kseftMeetingTime + ':00';
+                    var endTime = new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration : 24) * 3600 * 1000).toISOString();
+                    if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
+                        endTime = kseftEventDate + 'T23:59:59';
+                    }
+                    eventDetails.start = startTime;
+                    eventDetails.end = endTime;
+                } else {
+                    eventDetails.start = kseftEventDate;
+                    eventDetails.end = kseftEventDate;
+                }
 
                 var googleEventId = $('input[name="google_calendar_event_id"]').val();
                 if (googleEventId) {
@@ -367,6 +372,50 @@ if (!$kseft_id) {
                 e.preventDefault();
                 $('#manage-kseft-form').submit();
                 $('#update-google-event').click();
+            });
+
+            $('#add-to-calendar-button').on('click', function() {
+                var kseftId = $('input[name="kseft_id"]').val();
+                var kseftName = $('input[name="kseft_name"]').val();
+                var kseftLocation = $('input[name="kseft_location"]').val();
+                var kseftMeetingTime = $('input[name="kseft_meeting_time"]').val();
+                var kseftEventDate = $('input[name="kseft_event_date"]').val();
+                var kseftDuration = $('input[name="kseft_duration"]').val();
+                var kseftDescription = $('textarea[name="kseft_description"]').val();
+
+                var eventDetails = {
+                    summary: kseftName,
+                    location: kseftLocation,
+                    description: kseftDescription
+                };
+
+                if (kseftMeetingTime) {
+                    var startTime = kseftEventDate + 'T' + kseftMeetingTime + ':00';
+                    var endTime = new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration : 24) * 3600 * 1000).toISOString();
+                    if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
+                        endTime = kseftEventDate + 'T23:59:59';
+                    }
+                    eventDetails.start = startTime;
+                    eventDetails.end = endTime;
+                } else {
+                    eventDetails.start = kseftEventDate;
+                    eventDetails.end = kseftEventDate;
+                }
+
+                $.post(myTeamPlugin.ajax_url, {
+                    action: 'create_google_calendar_event',
+                    event_details: eventDetails,
+                    kseft_id: kseftId
+                }, function(response) {
+                    if (response.success) {
+                        alert('Google Calendar event created successfully.');
+                        window.location.href = response.data.redirect_url;
+                    } else {
+                        alert('Error creating Google Calendar event: ' + response.error);
+                    }
+                }).fail(function(xhr, status, error) {
+                    alert('AJAX error: ' + status + ' ' + error);
+                });
             });
         });
     </script>
