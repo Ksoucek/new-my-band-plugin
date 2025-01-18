@@ -4,7 +4,6 @@ require_once dirname(__DIR__, 5) . '/vendor/autoload.php'; // Ujistěte se, že 
 
 // Přidání REST API endpointu pro přidání události do Google Kalendáře
 add_action('rest_api_init', function () {
-    error_log_with_timestamp('Registering REST API endpoint: /add-to-calendar');
     register_rest_route('google-calendar/v1', '/add-to-calendar', [
         'methods'  => 'POST',
         'callback' => 'handle_add_to_calendar_request',
@@ -14,7 +13,6 @@ add_action('rest_api_init', function () {
 
 // Přidání REST API endpointu pro získání poslední chyby z logu
 add_action('rest_api_init', function () {
-    error_log_with_timestamp('Registering REST API endpoint: /get-last-error');
     register_rest_route('google-calendar/v1', '/get-last-error', [
         'methods'  => 'GET',
         'callback' => 'handle_get_last_error_request',
@@ -39,12 +37,11 @@ function generate_event_json($summary, $start_time, $end_time, $location) {
 }
 
 function handle_add_to_calendar_request(WP_REST_Request $request) {
-    error_log_with_timestamp('handle_add_to_calendar_request called');
     $event_details = $request->get_param('event_details');
+    $post_id = $request->get_param('post_id'); // Přidání post_id
 
-    if (!$event_details) {
-        error_log_with_timestamp('Missing parameter: event_details');
-        return new WP_REST_Response(['error' => 'Missing parameter: event_details'], 400);
+    if (!$event_details || !$post_id) {
+        return new WP_REST_Response(['error' => 'Missing parameter: event_details or post_id'], 400);
     }
 
     if (isset($event_details['start']['dateTime']) && isset($event_details['end']['dateTime'])) {
@@ -60,19 +57,18 @@ function handle_add_to_calendar_request(WP_REST_Request $request) {
         $event_details['end']['date'] = $event_details['end']['date'];
     }
 
-    error_log_with_timestamp('Event details received: ' . json_encode($event_details));
-
     if (empty($event_details['summary']) || empty($event_details['start']) || empty($event_details['location'])) {
-        error_log_with_timestamp('Invalid event details: ' . json_encode($event_details));
         return new WP_REST_Response(['error' => 'Invalid event details. Please provide summary, start dateTime, and location.'], 400);
     }
 
     $result = add_event_to_google_calendar($event_details);
 
     if (isset($result['error'])) {
-        error_log_with_timestamp('Error response: ' . $result['error']);
         return new WP_REST_Response(['error' => $result['error']], 500);
     }
+
+    // Uložení ID události Google Kalendáře do metadat příspěvku
+    update_post_meta($post_id, 'google_calendar_event_id', $result['event_id']);
 
     // Generování odkazu na Google Kalendářovou akci
     $event_link = generate_google_calendar_event_link($result['event_id']);
@@ -82,17 +78,13 @@ function handle_add_to_calendar_request(WP_REST_Request $request) {
 
 // Přidání funkce pro přidání události do Google Kalendáře
 function add_event_to_google_calendar($event_details) {
-    error_log_with_timestamp('add_event_to_google_calendar called');
     $credentials_path = plugin_dir_path(__FILE__) . 'credential.json'; // Ujistěte se, že cesta je správná
     if (!file_exists($credentials_path)) {
-        error_log_with_timestamp('Credentials file not found: ' . $credentials_path);
         return [
             'error' => 'Credentials file not found.'
         ];
     }
-
-    error_log_with_timestamp('Credentials file found: ' . $credentials_path);
-
+    
     $client = new Google_Client();
     $client->setAuthConfig($credentials_path);
     $client->addScope(Google_Service_Calendar::CALENDAR);
@@ -104,17 +96,43 @@ function add_event_to_google_calendar($event_details) {
     try {
         $calendarId = 'olo0v28necdv27n6mg7psud2dc@group.calendar.google.com';
         $event = $service->events->insert($calendarId, $event);
-        error_log_with_timestamp('Event added to Google Calendar: ' . json_encode($event));
         return [
             'success' => true,
             'event_id' => $event->getId()
         ];
     } catch (Exception $e) {
-        error_log_with_timestamp('Error adding event to Google Calendar: ' . $e->getMessage());
         return [
             'error' => 'Error adding event to Google Calendar.',
             'details' => $e->getMessage()
         ];
+    }
+}
+
+// Přidání funkce pro aktualizaci Google akce
+function updateGoogleCalendar($event_id, $details) {
+    $credentials_path = plugin_dir_path(__FILE__) . 'credential.json'; // Ujistěte se, že cesta je správná
+    if (!file_exists($credentials_path)) {
+        return false;
+    }
+
+    $client = new Google_Client();
+    $client->setAuthConfig($credentials_path);
+    $client->addScope(Google_Service_Calendar::CALENDAR);
+
+    $service = new Google_Service_Calendar($client);
+
+    try {
+        $calendarId = 'olo0v28necdv27n6mg7psud2dc@group.calendar.google.com'; // Použití kalendář ID z jiného souboru
+        $event = $service->events->get($calendarId, $event_id);
+        $event->setSummary($details['summary']);
+        $event->setLocation($details['location']);
+        $event->setDescription($details['description']);
+        $event->setStart(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['start'], 'timeZone' => 'Europe/Prague')));
+        $event->setEnd(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['end'], 'timeZone' => 'Europe/Prague')));
+        $updatedEvent = $service->events->update($calendarId, $event->getId(), $event);
+        return true;
+    } catch (Exception $e) {
+        return false;
     }
 }
 
@@ -144,24 +162,18 @@ function handle_get_last_error_request() {
     return new WP_REST_Response(['last_error' => $last_error], 200);
 }
 
-// Přidání funkce pro logování s časovou značkou
-function error_log_with_timestamp($message) {
-    $timestamp = date('Y-m-d H:i:s');
-    $log_message = "[$timestamp] $message\n";
-    $log_file = plugin_dir_path(__FILE__) . '../../custom_error_log.log';
+// Přidání funkce pro uložení Google Calendar event ID ke kartě kšeftu
+function save_google_event_id() {
+    $post_id = intval($_POST['post_id']);
+    $google_event_id = sanitize_text_field($_POST['google_event_id']);
 
-    // Zajistíme, že adresář existuje
-    $log_dir = dirname($log_file);
-    if (!is_dir($log_dir)) {
-        mkdir($log_dir, 0755, true);
+    if (update_post_meta($post_id, 'google_calendar_event_id', $google_event_id)) {
+        wp_send_json_success();
+    } else {
+        wp_send_json_error(['error' => 'Failed to save Google Calendar event ID.']);
     }
-
-    // Zajistíme, že soubor existuje
-    if (!file_exists($log_file)) {
-        file_put_contents($log_file, '');
-    }
-
-    error_log($log_message, 3, $log_file);
 }
+add_action('wp_ajax_save_google_event_id', 'save_google_event_id');
+add_action('wp_ajax_nopriv_save_google_event_id', 'save_google_event_id');
 
 ?>

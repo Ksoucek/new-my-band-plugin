@@ -423,6 +423,10 @@ function my_team_plugin_display_kseft_details($content) {
         }
         $custom_content .= '</div>';
 
+        // Přidání tlačítek pro úpravu kšeftu a přidání do Google Kalendáře
+        $custom_content .= '<a href="' . add_query_arg('kseft_id', $kseft_id, site_url('/manage-kseft')) . '" class="button">Upravit Kšeft</a>';
+        $custom_content .= '<button id="add-to-calendar-button" class="button">Přidat do Google Kalendáře</button>';
+
         $custom_content .= '<h3>Detaily Kšeftu</h3>';
         $custom_content .= '<p><strong>Lokace:</strong> ' . esc_html($location) . '</p>';
         $custom_content .= '<p><strong>Čas srazu:</strong> ' . esc_html($meeting_time) . '</p>';
@@ -483,18 +487,6 @@ function my_team_plugin_display_kseft_details($content) {
                 $custom_content .= '</table>';
             }
         }
-
-        // Přidání tlačítka pro úpravu kšeftu
-        $custom_content .= '<a href="' . add_query_arg('kseft_id', $kseft_id, site_url('/manage-kseft')) . '" class="button">Upravit Kšeft</a>';
-
-        // Zakomentování tlačítek pro ruční spuštění optimalizace dopravy a testování API
-        // $custom_content .= '<button id="optimize-transport-button" class="button">Optimalizovat dopravu</button>';
-        // $custom_content .= '<button id="test-api-button" class="button">Test API</button>';
-
-        // Přidání tlačítka pro přidání události do Google Kalendáře
-        $custom_content .= '<button id="add-to-calendar-button" class="button">Přidat do Google Kalendáře</button>';
-        // Odebrání tlačítka pro generování JSON
-        // $custom_content .= '<button id="generate-json-button" class="button">Generovat JSON</button>';
 
         // Přidání modálního okna pro potvrzení účasti
         $custom_content .= '<div id="role-confirmation-modal" style="display: none;">
@@ -901,4 +893,58 @@ function my_team_plugin_get_event_details() {
 }
 add_action('wp_ajax_get_event_details', 'my_team_plugin_get_event_details');
 add_action('wp_ajax_nopriv_get_event_details', 'my_team_plugin_get_event_details');
+
+function my_team_plugin_update_google_calendar_event() {
+    error_log('my_team_plugin_update_google_calendar_event function called');
+    $event_id = sanitize_text_field($_POST['event_id']);
+    $event_details = $_POST['event_details'];
+
+    error_log('AJAX request received to update Google Calendar event with ID: ' . $event_id);
+    error_log('Event details: ' . print_r($event_details, true));
+
+    $result = updateGoogleCalendar($event_id, $event_details);
+
+    if ($result) {
+        error_log('Google Calendar event updated successfully.');
+        wp_send_json_success();
+    } else {
+        error_log('Failed to update Google Calendar event.');
+        wp_send_json_error(array('error' => 'Failed to update Google Calendar event.'));
+    }
+}
+add_action('wp_ajax_update_google_calendar_event', 'my_team_plugin_update_google_calendar_event');
+add_action('wp_ajax_nopriv_update_google_calendar_event', 'my_team_plugin_update_google_calendar_event');
+
+// Přidání funkce pro smazání Google akce
+function delete_google_calendar_event($event_id) {
+    $credentials_path = plugin_dir_path(__FILE__) . 'includes/credential.json'; // Ujistěte se, že cesta je správná
+    if (!file_exists($credentials_path)) {
+        return false;
+    }
+
+    $client = new Google_Client();
+    $client->setAuthConfig($credentials_path);
+    $client->addScope(Google_Service_Calendar::CALENDAR);
+
+    $service = new Google_Service_Calendar($client);
+
+    try {
+        $calendarId = 'olo0v28necdv27n6mg7psud2dc@group.calendar.google.com';
+        $service->events->delete($calendarId, $event_id);
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+// Přidání akce pro smazání Google akce při smazání kšeftu
+function my_team_plugin_delete_kseft($post_id) {
+    if (get_post_type($post_id) === 'kseft') {
+        $google_event_id = get_post_meta($post_id, 'google_calendar_event_id', true);
+        if ($google_event_id) {
+            delete_google_calendar_event($google_event_id);
+        }
+    }
+}
+add_action('before_delete_post', 'my_team_plugin_delete_kseft');
 ?>
