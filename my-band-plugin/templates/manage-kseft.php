@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kseft_obsazeni_template = sanitize_text_field($_POST['kseft_obsazeni_template']);
     $kseft_status = sanitize_text_field($_POST['kseft_status']); // Přidání pole pro stav
     $kseft_clothing = sanitize_text_field($_POST['kseft_clothing']); // Přidání pole pro oblečení
+    $kseft_description = sanitize_textarea_field($_POST['kseft_description']); // Přidání pole pro popis
 
     $kseft_data = array(
         'post_title' => $kseft_name,
@@ -33,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         update_post_meta($kseft_id, 'kseft_obsazeni_template', $kseft_obsazeni_template);
         update_post_meta($kseft_id, 'kseft_status', $kseft_status); // Uložení pole pro stav
         update_post_meta($kseft_id, 'kseft_clothing', $kseft_clothing); // Uložení pole pro oblečení
+        update_post_meta($kseft_id, 'kseft_description', $kseft_description); // Uložení pole pro popis
 
         // Aktualizace Google Kalendáře přes AJAX
         $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true);
@@ -43,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     var eventDetails = {
                         summary: '<?php echo $kseft_name; ?>',
                         location: '<?php echo $kseft_location; ?>',
-                        description: '<?php echo $kseft_status; ?>',
+                        description: '<?php echo $kseft_description; ?>',
                         start: '<?php echo $kseft_event_date . 'T' . $kseft_meeting_time . ':00'; ?>',
                         end: '<?php echo $kseft_event_date . 'T' . date('H:i:s', strtotime($kseft_meeting_time) + $kseft_duration * 3600); ?>'
                     };
@@ -98,6 +100,7 @@ $kseft_obsazeni_template = $kseft ? get_post_meta($kseft_id, 'kseft_obsazeni_tem
 $kseft_status = $kseft ? get_post_meta($kseft_id, 'kseft_status', true) : ''; // Načtení pole pro stav
 $kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : ''; // Načtení pole pro oblečení
 $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true); // Přidání proměnné $google_event_id
+$kseft_description = $kseft ? get_post_meta($kseft_id, 'kseft_description', true) : ''; // Načtení pole pro popis
 ?>
 
 <!DOCTYPE html>
@@ -136,7 +139,7 @@ $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true); /
             margin-bottom: 5px;
             font-weight: bold;
         }
-        .form-group input, .form-group select {
+        .form-group input, .form-group select, .form-group textarea {
             width: 100%;
             padding: 10px;
             box-sizing: border-box;
@@ -246,6 +249,10 @@ $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true); /
                     </select>
                 </div>
             </div>
+            <div class="form-group">
+                <label for="kseft_description">Popis <span title="Poznámky - např. doprava, instrukce atd.">(?)</span>:</label>
+                <textarea name="kseft_description" id="kseft_description" rows="4"><?php echo esc_textarea($kseft_description); ?></textarea>
+            </div>
             <div id="map-kseft"></div>
             <div class="form-actions">
                 <button type="submit" class="button" id="submit-kseft"><?php echo $kseft_id ? 'Upravit Kšeft' : 'Vytvořit Kšeft'; ?></button>
@@ -315,11 +322,12 @@ $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true); /
                 var kseftEventDate = $('input[name="kseft_event_date"]').val();
                 var kseftDuration = $('input[name="kseft_duration"]').val();
                 var kseftStatus = $('select[name="kseft_status"]').val();
+                var kseftDescription = $('textarea[name="kseft_description"]').val();
 
                 var eventDetails = {
                     summary: kseftName,
                     location: kseftLocation,
-                    description: kseftStatus,
+                    description: kseftDescription,
                     start: kseftEventDate + 'T' + kseftMeetingTime + ':00',
                     end: kseftEventDate + 'T' + new Date(new Date(kseftEventDate + 'T' + kseftMeetingTime + ':00').getTime() + kseftDuration * 3600 * 1000).toISOString().split('T')[1]
                 };

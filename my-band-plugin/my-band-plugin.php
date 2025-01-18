@@ -222,6 +222,7 @@ function my_team_plugin_display_ksefty() {
     $ksefty = new WP_Query($args);
     error_log('Query executed: ' . print_r($args, true));
     $output = '<div class="business-overview">';
+    $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>'; // Přesunutí tlačítka nahoru
     if ($ksefty->have_posts()) {
         $output .= '<table>';
         $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></thead>';
@@ -258,11 +259,11 @@ function my_team_plugin_display_ksefty() {
             }
             $formatted_date = date_i18n('D d.m.Y', strtotime($event_date));
             $output .= '<tr>';
-            $output .= '<td>' . esc_html($formatted_date) . '</td>';
+            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($formatted_date) . '</a></td>'; // Přidání odkazu na termín
             $output .= '<td><a href="' . get_permalink() . '">' . get_the_title() . '</a></td>';
             $output .= '<td><a href="' . get_permalink() . '">' . esc_html($location) . '</a></td>';
             $output .= '<td><a href="' . get_permalink() . '" class="button kseft-status-button ' . esc_attr($obsazeni_class) . '">' . esc_html($obsazeni_text) . '</a></td>';
-            $output .= '<td>' . esc_html($status) . '</td>';
+            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($status) . '</a></td>'; // Přidání odkazu na stav
             $output .= '</tr>';
         }
         $output .= '</tbody>';
@@ -272,7 +273,6 @@ function my_team_plugin_display_ksefty() {
         $output .= '<p>Žádné kšefty nejsou k dispozici.</p>';
     }
     $output .= '</div>';
-    $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>';
     error_log('Output: ' . $output);
     return $output;
 }
@@ -403,6 +403,7 @@ function my_team_plugin_display_kseft_details($content) {
         $kseft_duration = get_post_meta($kseft_id, 'kseft_duration', true); // Přidání pole pro předpokládanou délku
         $status = get_post_meta($kseft_id, 'kseft_status', true);
         $clothing = get_post_meta($kseft_id, 'kseft_clothing', true);
+        $description = get_post_meta($kseft_id, 'kseft_description', true); // Přidání pole pro popis
         $obsazeni_template_id = get_post_meta($kseft_id, 'kseft_obsazeni_template', true);
         $obsazeni_template = get_post($obsazeni_template_id);
 
@@ -435,6 +436,7 @@ function my_team_plugin_display_kseft_details($content) {
         $custom_content .= '<p><strong>Předpokládaná délka:</strong> ' . esc_html($kseft_duration) . ' hodin</p>'; // Přidání délky kšeftu
         $custom_content .= '<p><strong>Status:</strong> ' . esc_html($status) . '</p>';
         $custom_content .= '<p><strong>Oblečení:</strong> ' . esc_html($clothing) . '</p>';
+        $custom_content .= '<p><strong>Popis:</strong> ' . esc_html($description) . '</p>'; // Přidání popisu
         if ($obsazeni_template) {
             $custom_content .= '<h4>Obsazení:</h4>';
             $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);

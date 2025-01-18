@@ -1,8 +1,123 @@
 /* Mobile styles */
 @media (max-width: 600px) {
     .business-overview {
+        font-size: 12px;
+        padding: 8px;
+    }
+    .business-overview table {
+        width: 100%;
+        border-collapse: collapse;
+        display: block;
+        overflow-x: auto;
+    }
+    .business-overview th, .business-overview td {
+        padding: 6px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+        white-space: nowrap;
+    }
+    .business-overview th {
+        background-color: #f2f2f2;
+    }
+    .business-overview tr:hover {
+        background-color: #f5f5f5;
+    }
+    .container {
+        padding: 8px;
+    }
+
+    h1 {
+        font-size: 18px;
+    }
+
+    .form-group-inline {
+        flex-direction: column;
+    }
+
+    .form-group-inline .form-group {
+        margin-right: 0;
+        margin-bottom: 8px;
+    }
+
+    .form-group label {
+        font-size: 12px;
+    }
+
+    .form-group input, .form-group select {
+        padding: 8px;
+        font-size: 12px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions .button {
+        width: 100%;
+        margin-bottom: 8px;
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    #obsazeni-table {
+        width: 100%;
+        overflow-x: auto;
+        display: block;
+    }
+
+    #obsazeni-table thead, #obsazeni-table tbody, #obsazeni-table th, #obsazeni-table td, #obsazeni-table tr {
+        display: block;
+    }
+
+    #obsazeni-table thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    #obsazeni-table tr {
+        border: 1px solid #ccc;
+    }
+
+    #obsazeni-table td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 50%;
+        white-space: normal;
+        text-align: left;
+    }
+
+    #obsazeni-table td:before {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+        font-size: 12px;
+    }
+
+    #obsazeni-table td:nth-of-type(1):before { content: "Název role"; }
+    #obsazeni-table td:nth-of-type(2):before { content: "Potvrzení"; }
+    #obsazeni-table td:nth-of-type(3):before { content: "Místo vyzvednutí"; }
+    #obsazeni-table td:nth-of-type(4):before { content: "Čas vyzvednutí"; }
+    #obsazeni-table td:nth-of-type(5):before { content: "Doprava"; }
+    #obsazeni-table td:nth-of-type(6):before { content: "Akce"; }
+
+    .kseft-status-button {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+}
+
+/* Tablet styles */
+@media (min-width: 601px) and (max-width: 1024px) {
+    .business-overview {
         font-size: 14px;
-        padding: 10px;
+        padding: 16px;
     }
     .business-overview table {
         width: 100%;
@@ -19,16 +134,22 @@
     .business-overview tr:hover {
         background-color: #f5f5f5;
     }
+
+    .kseft-status-button {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
 }
 
-/* Tablet styles */
-@media (min-width: 601px) and (max-width: 1024px) {
+/* Desktop styles */
+@media (min-width: 1025px) {
     .business-overview {
         font-size: 16px;
-        padding: 20px;
+        padding: 24px;
     }
     .business-overview table {
-        width: 100%;
+        width: 80%;
+        margin: 0 auto;
         border-collapse: collapse;
     }
     .business-overview th, .business-overview td {
@@ -42,28 +163,9 @@
     .business-overview tr:hover {
         background-color: #f5f5f5;
     }
-}
 
-/* Desktop styles */
-@media (min-width: 1025px) {
-    .business-overview {
-        font-size: 18px;
-        padding: 30px;
-    }
-    .business-overview table {
-        width: 80%;
-        margin: 0 auto;
-        border-collapse: collapse;
-    }
-    .business-overview th, .business-overview td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-    }
-    .business-overview th {
-        background-color: #f2f2f2;
-    }
-    .business-overview tr:hover {
-        background-color: #f5f5f5;
+    .kseft-status-button {
+        font-size: 14px;
+        padding: 8px 16px;
     }
 }
