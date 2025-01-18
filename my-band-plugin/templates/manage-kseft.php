@@ -46,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         summary: '<?php echo $kseft_name; ?>',
                         location: '<?php echo $kseft_location; ?>',
                         description: '<?php echo $kseft_description; ?>',
-                        start: '<?php echo $kseft_event_date . 'T' . $kseft_meeting_time . ':00'; ?>',
-                        end: '<?php echo $kseft_event_date . 'T' . date('H:i:s', strtotime($kseft_meeting_time) + $kseft_duration * 3600); ?>'
+                        start: '<?php echo $kseft_event_date . 'T' . ($kseft_meeting_time ? $kseft_meeting_time : '00:00') . ':00'; ?>',
+                        end: '<?php echo $kseft_event_date . 'T' . ($kseft_meeting_time ? date('H:i:s', strtotime($kseft_meeting_time) + ($kseft_duration ? $kseft_duration : 24) * 3600) : '23:59:59'); ?>'
                     };
 
                     console.log('Sending AJAX request to update Google Calendar event:', eventDetails);
@@ -101,6 +101,10 @@ $kseft_status = $kseft ? get_post_meta($kseft_id, 'kseft_status', true) : ''; //
 $kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : ''; // Načtení pole pro oblečení
 $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true); // Přidání proměnné $google_event_id
 $kseft_description = $kseft ? get_post_meta($kseft_id, 'kseft_description', true) : ''; // Načtení pole pro popis
+
+if (!$kseft_id) {
+    $google_event_id = ''; // Nastavení prázdného ID pro nové kšefty
+}
 ?>
 
 <!DOCTYPE html>
@@ -324,12 +328,19 @@ $kseft_description = $kseft ? get_post_meta($kseft_id, 'kseft_description', true
                 var kseftStatus = $('select[name="kseft_status"]').val();
                 var kseftDescription = $('textarea[name="kseft_description"]').val();
 
+                var startTime = kseftMeetingTime ? kseftEventDate + 'T' + kseftMeetingTime + ':00' : kseftEventDate + 'T00:00:00';
+                var endTime = kseftMeetingTime ? new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration : 24) * 3600 * 1000).toISOString() : kseftEventDate + 'T23:59:59';
+
+                if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
+                    endTime = kseftEventDate + 'T23:59:59';
+                }
+
                 var eventDetails = {
                     summary: kseftName,
                     location: kseftLocation,
                     description: kseftDescription,
-                    start: kseftEventDate + 'T' + kseftMeetingTime + ':00',
-                    end: kseftEventDate + 'T' + new Date(new Date(kseftEventDate + 'T' + kseftMeetingTime + ':00').getTime() + kseftDuration * 3600 * 1000).toISOString().split('T')[1]
+                    start: startTime,
+                    end: endTime
                 };
 
                 var googleEventId = $('input[name="google_calendar_event_id"]').val();

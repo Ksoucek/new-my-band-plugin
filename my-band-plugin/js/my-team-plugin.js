@@ -570,12 +570,19 @@ jQuery(document).ready(function($) {
         var kseftDuration = $('input[name="kseft_duration"]').val();
         var kseftStatus = $('select[name="kseft_status"]').val();
 
+        var startTime = kseftMeetingTime ? kseftEventDate + 'T' + kseftMeetingTime + ':00' : kseftEventDate + 'T00:00:00';
+        var endTime = kseftMeetingTime ? new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration : 24) * 3600 * 1000).toISOString() : kseftEventDate + 'T23:59:59';
+
+        if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
+            endTime = kseftEventDate + 'T23:59:59';
+        }
+
         var eventDetails = {
             summary: kseftName,
             location: kseftLocation,
             description: kseftStatus,
-            start: kseftEventDate + 'T' + kseftMeetingTime + ':00',
-            end: kseftEventDate + 'T' + new Date(new Date(kseftEventDate + 'T' + kseftMeetingTime + ':00').getTime() + kseftDuration * 3600 * 1000).toISOString().split('T')[1]
+            start: startTime,
+            end: endTime
         };
 
         var googleEventId = $('input[name="google_calendar_event_id"]').val();
