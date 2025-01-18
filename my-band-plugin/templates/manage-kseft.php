@@ -84,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['delete_kseft_id'])) {
     $delete_kseft_id = intval($_GET['delete_kseft_id']);
     if (wp_delete_post($delete_kseft_id)) {
         echo '<p>Kšeft byl úspěšně smazán.</p>';
+        echo '<script>window.location.href = "' . site_url('/manage-kseft') . '";</script>'; // Přesměrování na stránku Manage Kseft
     } else {
         echo '<p>Došlo k chybě při mazání kšeftu.</p>';
     }
@@ -218,13 +219,13 @@ if (!$kseft_id) {
                 </div>
                 <div class="form-group">
                     <label for="kseft_duration">Předpokládaná délka (v hodinách):</label>
-                    <input type="number" name="kseft_duration" id="kseft_duration" value="<?php echo esc_attr($kseft_duration); ?>" required>
+                    <input type="number" name="kseft_duration" id="kseft_duration" value="<?php echo esc_attr($kseft_duration); ?>">
                 </div>
             </div>
             <div class="form-group-inline">
                 <div class="form-group">
                     <label for="kseft_meeting_time">Čas srazu:</label>
-                    <input type="text" name="kseft_meeting_time" id="kseft_meeting_time" value="<?php echo esc_attr($kseft_meeting_time); ?>" required>
+                    <input type="text" name="kseft_meeting_time" id="kseft_meeting_time" value="<?php echo esc_attr($kseft_meeting_time); ?>">
                 </div>
                 <div class="form-group">
                     <label for="kseft_obsazeni_template">Šablona obsazení:</label>
@@ -263,7 +264,6 @@ if (!$kseft_id) {
                 <a href="<?php echo site_url('/ksefty'); ?>" class="button">Zpět na seznam kšeftů</a>
                 <?php if ($kseft_id) : ?>
                     <a href="<?php echo add_query_arg('delete_kseft_id', $kseft_id, site_url('/manage-kseft')); ?>" class="button delete" onclick="return confirm('Opravdu chcete smazat tento kšeft?');">Smazat Kšeft</a>
-                    <button type="button" id="update-google-event" class="button" style="display: none;">Aktualizovat Google Akci</button>
                 <?php endif; ?>
             </div>
         </form>
