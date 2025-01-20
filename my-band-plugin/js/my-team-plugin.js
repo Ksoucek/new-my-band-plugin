@@ -395,9 +395,82 @@ jQuery(document).ready(function($) {
         });
     });
 
+    function handleGoogleCalendarEvent(postId, eventDetails, googleEventId) {
+        if (!postId) {
+            console.error('Missing post_id');
+            alert('Chyba: post_id není k dispozici.');
+            return;
+        }
+
+        var action = googleEventId ? 'update_google_calendar_event' : 'add_google_calendar_event';
+        var ajaxUrl = googleEventId ? myTeamPlugin.ajax_url : myTeamPlugin.rest_url;
+
+        console.log('Sending AJAX request to ' + (googleEventId ? 'update' : 'add') + ' Google Calendar event:', eventDetails);
+
+        var data = {
+            action: action,
+            post_id: postId,
+            event_details: eventDetails
+        };
+
+        if (googleEventId) {
+            data.event_id = googleEventId;
+        }
+
+        $.ajax({
+            url: ajaxUrl,
+            method: 'POST',
+            beforeSend: function(xhr) {
+                if (!googleEventId) {
+                    xhr.setRequestHeader('X-WP-Nonce', myTeamPlugin.nonce);
+                }
+            },
+            data: JSON.stringify(data),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    console.log('Google Calendar event ' + (googleEventId ? 'updated' : 'added') + ' successfully:', response.event_id);
+                    alert('Událost byla úspěšně ' + (googleEventId ? 'aktualizována' : 'přidána') + ' do Google Kalendáře.');
+
+                    if (!googleEventId) {
+                        // Uložení Google Calendar event ID ke kartě kšeftu
+                        $.post(myTeamPlugin.ajax_url, {
+                            action: 'save_google_event_id',
+                            post_id: postId,
+                            google_event_id: response.event_id
+                        }).done(function(saveResponse) {
+                            if (saveResponse.success) {
+                                console.log('Google Calendar event ID saved successfully.');
+                            } else {
+                                console.error('Error saving Google Calendar event ID:', saveResponse.error);
+                            }
+                        }).fail(function(xhr, status, error) {
+                            console.error('AJAX error:', status, error);
+                            console.error('AJAX response:', xhr.responseText);
+                        });
+                    }
+                } else {
+                    console.error('Error ' + (googleEventId ? 'updating' : 'adding') + ' event to Google Calendar:', response.error);
+                    alert('Chyba při ' + (googleEventId ? 'aktualizaci' : 'přidávání') + ' události do Google Kalendáře.');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX error:', error);
+                console.error('Response:', xhr.responseText);
+                alert('Chyba při komunikaci se serverem.');
+            }
+        });
+    }
+
     $('#add-to-calendar-button').on('click', function() {
         console.log('Add to Calendar button clicked');
         var postId = myTeamPlugin.post_id;
+
+        if (!postId) {
+            console.error('Missing post_id');
+            alert('Chyba: post_id není k dispozici.');
+            return;
+        }
 
         $.post(myTeamPlugin.ajax_url, {
             action: 'get_event_details',
@@ -432,56 +505,53 @@ jQuery(document).ready(function($) {
                     eventDetails.end.date = eventDate;
                 }
 
-                console.log('Event details:', eventDetails);
+                console.log('JS Event details:', eventDetails);
 
-                // Původní AJAX volání pro přidání události do Google Kalendáře
-                $.ajax({
-                    url: myTeamPlugin.rest_url,
-                    method: 'POST',
-                    beforeSend: function(xhr) {
-                        xhr.setRequestHeader('X-WP-Nonce', myTeamPlugin.nonce);
-                    },
-                    data: JSON.stringify({
-                        event_details: eventDetails,
-                        post_id: postId // Přidání post_id do požadavku
-                    }),
-                    contentType: 'application/json',
-                    success: function(response) {
-                        if (response.success) {
-                            console.log('js Event added to Google Calendar:', response.event_id);
-                            alert('Událost byla úspěšně přidána do Google Kalendáře.');
-
-                            // Uložení Google Calendar event ID ke kartě kšeftu
-                            $.post(myTeamPlugin.ajax_url, {
-                                action: 'save_google_event_id',
-                                post_id: postId,
-                                google_event_id: response.event_id
-                            }).done(function(saveResponse) {
-                                if (saveResponse.success) {
-                                    console.log('Google Calendar event ID saved successfully.');
-                                } else {
-                                    console.error('Error saving Google Calendar event ID:', saveResponse.error);
-                                }
-                            }).fail(function(xhr, status, error) {
-                                console.error('AJAX error:', status, error);
-                                console.error('AJAX response:', xhr.responseText);
-                            });
-                        } else {
-                            console.error('Error adding event to Google Calendar:', response.error);
-                            alert('Chyba při přidávání události do Google Kalendáře.');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('AJAX error:', error);
-                        console.error('Response:', xhr.responseText);
-                        alert('Chyba při komunikaci se serverem.');
-                    }
-                });
+                var googleEventId = response.data.google_event_id || null;
+                handleGoogleCalendarEvent(postId, eventDetails, googleEventId);
             } else {
                 console.error('Error fetching event details:', response.data);
                 alert('Chyba při získávání detailů události.');
             }
         });
+    });
+
+    $('#manage-kseft-form').on('submit', function(e) {
+        e.preventDefault();
+
+        var kseftId = $('input[name="kseft_id"]').val();
+        var kseftName = $('input[name="kseft_name"]').val();
+        var kseftLocation = $('input[name="kseft_location"]').val();
+        var kseftMeetingTime = $('input[name="kseft_meeting_time"]').val();
+        var kseftEventDate = $('input[name="kseft_event_date"]').val();
+        var kseftDuration = $('input[name="kseft_duration"]').val();
+        var kseftStatus = $('select[name="kseft_status"]').val();
+
+        if (!kseftId) {
+            console.error('Missing kseft_id');
+            alert('Chyba: kseft_id není k dispozici.');
+            return;
+        }
+
+        var startTime = kseftMeetingTime ? kseftEventDate + 'T' + kseftMeetingTime + ':00' : kseftEventDate + 'T00:00:00';
+        var endTime = kseftMeetingTime ? new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration : 24) * 3600 * 1000).toISOString() : kseftEventDate + 'T23:59:59';
+
+        if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
+            endTime = kseftEventDate + 'T23:59:59';
+        }
+
+        var eventDetails = {
+            summary: kseftName,
+            location: kseftLocation,
+            description: kseftStatus,
+            start: startTime,
+            end: endTime
+        };
+
+        var googleEventId = $('input[name="google_calendar_event_id"]').val();
+        handleGoogleCalendarEvent(kseftId, eventDetails, googleEventId);
+
+        this.submit();
     });
 
     // Přidání řazení na všech sloupcích
@@ -540,56 +610,4 @@ jQuery(document).ready(function($) {
         'padding': '20px' // Zvýšení vnitřního odsazení
     });
 
-    function updateGoogleCalendarEvent(eventId, eventDetails) {
-        console.log('Sending AJAX request to update Google Calendar event:', eventDetails);
-
-        $.post(myTeamPlugin.ajax_url, {
-            action: 'update_google_calendar_event',
-            event_id: eventId,
-            event_details: eventDetails
-        }, function(response) {
-            if (response.success) {
-                console.log('Google Calendar event updated successfully.');
-            } else {
-                console.error('Error updating Google Calendar event:', response.error);
-            }
-        }).fail(function(xhr, status, error) {
-            console.error('AJAX error:', status, error);
-            console.error('AJAX response:', xhr.responseText);
-        });
-    }
-
-    $('#manage-kseft-form').on('submit', function(e) {
-        e.preventDefault();
-
-        var kseftId = $('input[name="kseft_id"]').val();
-        var kseftName = $('input[name="kseft_name"]').val();
-        var kseftLocation = $('input[name="kseft_location"]').val();
-        var kseftMeetingTime = $('input[name="kseft_meeting_time"]').val();
-        var kseftEventDate = $('input[name="kseft_event_date"]').val();
-        var kseftDuration = $('input[name="kseft_duration"]').val();
-        var kseftStatus = $('select[name="kseft_status"]').val();
-
-        var startTime = kseftMeetingTime ? kseftEventDate + 'T' + kseftMeetingTime + ':00' : kseftEventDate + 'T00:00:00';
-        var endTime = kseftMeetingTime ? new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration : 24) * 3600 * 1000).toISOString() : kseftEventDate + 'T23:59:59';
-
-        if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
-            endTime = kseftEventDate + 'T23:59:59';
-        }
-
-        var eventDetails = {
-            summary: kseftName,
-            location: kseftLocation,
-            description: kseftStatus,
-            start: startTime,
-            end: endTime
-        };
-
-        var googleEventId = $('input[name="google_calendar_event_id"]').val();
-        if (googleEventId) {
-            updateGoogleCalendarEvent(googleEventId, eventDetails);
-        }
-
-        this.submit();
-    });
 });

@@ -40,8 +40,12 @@ function handle_add_to_calendar_request(WP_REST_Request $request) {
     $event_details = $request->get_param('event_details');
     $post_id = $request->get_param('post_id'); // Přidání post_id
 
-    if (!$event_details || !$post_id) {
-        return new WP_REST_Response(['error' => 'Missing parameter: event_details or post_id'], 400);
+    if (!$event_details) {
+        return new WP_REST_Response(['error' => 'Missing parameter: event_details'], 400);
+    }
+
+    if (!$post_id) {
+        return new WP_REST_Response(['error' => 'Missing parameter: post_id'], 400);
     }
 
     if (isset($event_details['start']['dateTime']) && isset($event_details['end']['dateTime'])) {

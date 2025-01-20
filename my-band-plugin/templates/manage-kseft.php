@@ -383,11 +383,21 @@ if (!$kseft_id) {
                 var kseftDuration = $('input[name="kseft_duration"]').val();
                 var kseftDescription = $('textarea[name="kseft_description"]').val();
 
-                var eventDetails = {
+                console.log('kseftId:', kseftId);
+                console.log('kseftName:', kseftName);
+                console.log('kseftLocation:', kseftLocation);
+                console.log('kseftMeetingTime:', kseftMeetingTime);
+                console.log('kseftEventDate:', kseftEventDate);
+                console.log('kseftDuration:', kseftDuration);
+                console.log('kseftDescription:', kseftDescription);
+
+                console.log('Php Event Details:', {
                     summary: kseftName,
                     location: kseftLocation,
                     description: kseftDescription
-                };
+                });
+
+                
 
                 if (kseftMeetingTime) {
                     var startTime = kseftEventDate + 'T' + kseftMeetingTime + ':00';
@@ -401,7 +411,11 @@ if (!$kseft_id) {
                     eventDetails.start = kseftEventDate;
                     eventDetails.end = kseftEventDate;
                 }
-
+                var eventDetails = {
+                    summary: kseftName,
+                    location: kseftLocation,
+                    description: kseftDescription
+                };
                 $.post(myTeamPlugin.ajax_url, {
                     action: 'create_google_calendar_event',
                     event_details: eventDetails,
