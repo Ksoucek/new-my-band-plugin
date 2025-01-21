@@ -949,4 +949,100 @@ function my_team_plugin_delete_kseft($post_id) {
     }
 }
 add_action('before_delete_post', 'my_team_plugin_delete_kseft');
+
+function my_team_plugin_add_kseft_overview_page() {
+    add_menu_page(
+        'Přehled Kšeftů',
+        'Přehled Kšeftů',
+        'manage_options',
+        'kseft-overview',
+        'my_team_plugin_render_kseft_overview_page',
+        'dashicons-calendar-alt',
+        6
+    );
+}
+add_action('admin_menu', 'my_team_plugin_add_kseft_overview_page');
+
+function my_team_plugin_render_kseft_overview_page() {
+    ?>
+    <div class="wrap">
+        <h1>Přehled Kšeftů</h1>
+        <?php echo do_shortcode('[kseft_overview]'); ?>
+    </div>
+    <?php
+}
+
+function my_team_plugin_kseft_overview_shortcode() {
+    ob_start();
+    ?>
+    <div>
+        <label for="role_select">Vyberte roli:</label>
+        <select id="role_select">
+            <option value="">-- Vyberte roli --</option>
+            <?php
+            $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
+            foreach ($roles as $role) {
+                echo '<option value="' . esc_attr($role->ID) . '">' . esc_html($role->post_title) . '</option>';
+            }
+            ?>
+        </select>
+    </div>
+    <table id="kseft-overview-table">
+        <thead>
+            <tr>
+                <th>Termín</th>
+                <th>Název</th>
+                <th>Lokace</th>
+                <th>Stav</th>
+                <th>Akce</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            $args = array(
+                'post_type' => 'kseft',
+                'post_status' => 'publish',
+                'posts_per_page' => -1,
+                'meta_key' => 'kseft_event_date',
+                'orderby' => 'meta_value',
+                'order' => 'ASC'
+            );
+            $ksefty = new WP_Query($args);
+            if ($ksefty->have_posts()) {
+                while ($ksefty->have_posts()) {
+                    $ksefty->the_post();
+                    $event_date = get_post_meta(get_the_ID(), 'kseft_event_date', true);
+                    $location = get_post_meta(get_the_ID(), 'kseft_location', true);
+                    $status = get_post_meta(get_the_ID(), 'kseft_status', true);
+                    $obsazeni_template_id = get_post_meta(get_the_ID(), 'kseft_obsazeni_template', true);
+                    $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
+                    $formatted_date = date_i18n('D d.m.Y', strtotime($event_date));
+                    ?>
+                    <tr data-role-ids="<?php echo esc_attr(json_encode($roles)); ?>">
+                        <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($formatted_date); ?></a></td>
+                        <td><a href="<?php echo get_permalink(); ?>"><?php echo get_the_title(); ?></a></td>
+                        <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($location); ?></a></td>
+                        <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($status); ?></a></td>
+                        <td><button class="button confirm-role-button" data-kseft-id="<?php echo get_the_ID(); ?>">Potvrdit účast</button></td>
+                    </tr>
+                    <?php
+                }
+                wp_reset_postdata();
+            } else {
+                ?>
+                <tr>
+                    <td colspan="5">Žádné kšefty nejsou k dispozici.</td>
+                </tr>
+                <?php
+            }
+            ?>
+        </tbody>
+    </table>
+
+    <?php include plugin_dir_path(__FILE__) . 'templates/role-confirmation-modal.php'; ?>
+
+    <?php
+    return ob_get_clean();
+}
+add_shortcode('kseft_overview', 'my_team_plugin_kseft_overview_shortcode');
 ?>

@@ -425,8 +425,7 @@ jQuery(document).ready(function($) {
                     xhr.setRequestHeader('X-WP-Nonce', myTeamPlugin.nonce);
                 }
             },
-            data: JSON.stringify(data),
-            contentType: 'application/json',
+            data: data,
             success: function(response) {
                 if (response.success) {
                     console.log('Google Calendar event ' + (googleEventId ? 'updated' : 'added') + ' successfully:', response.event_id);
@@ -608,6 +607,101 @@ jQuery(document).ready(function($) {
 
     $('#role-confirmation-modal .modal-content').css({
         'padding': '20px' // Zvýšení vnitřního odsazení
+    });
+
+    $('.confirm-role-button').on('click', function() {
+        var kseftId = $(this).data('kseft-id');
+        var selectedRoleId = $('#role_select').val();
+        if (!selectedRoleId) {
+            alert('Prosím vyberte roli.');
+            return;
+        }
+        $('#kseft_id').val(kseftId);
+        $('#role_id').val(selectedRoleId);
+        $('#role_status').val('Nepotvrzeno');
+        $('#role_substitute').val('');
+        $('#pickup_location').val('');
+        $('#default_player').val('');
+        $('#substitute-field').hide();
+        $('#pickup-location-field').hide();
+        $('#default-player-field').hide();
+        $('#role-confirmation-modal').show();
+    });
+
+    $('#role_status').on('change', function() {
+        if ($(this).val() === 'Záskok') {
+            $('#substitute-field').show();
+            $('#pickup-location-field').show();
+            $('#default-player-field').hide();
+            $('#pickup_location').val('');
+        } else if ($(this).val() === 'Jdu') {
+            $('#substitute-field').hide();
+            $('#pickup-location-field').show();
+            $('#default-player-field').show();
+            var defaultPickupLocation = $('#pickup_location').data('default-pickup-location');
+            $('#pickup_location').val(defaultPickupLocation);
+        } else {
+            $('#substitute-field').hide();
+            $('#pickup-location-field').hide();
+            $('#default-player-field').hide();
+        }
+    });
+
+    $('#role-confirmation-form').on('submit', function(e) {
+        e.preventDefault();
+        var kseftId = $('#kseft_id').val();
+        var roleId = $('#role_id').val();
+        var roleStatus = $('#role_status').val();
+        var roleSubstitute = $('#role_substitute').val();
+        var pickupLocation = $('#pickup_location').val();
+
+        $.post(myTeamPlugin.ajax_url, {
+            action: 'save_role_confirmation',
+            post_id: kseftId,
+            role_id: roleId,
+            role_status: roleStatus,
+            role_substitute: roleSubstitute,
+            pickup_location: pickupLocation
+        }, function(response) {
+            $('#role-confirmation-modal').hide();
+            location.reload();
+        });
+    });
+
+    $('#close-modal').on('click', function() {
+        $('#role-confirmation-modal').hide();
+    });
+
+    $('#role_select').on('change', function() {
+        var selectedRoleId = $(this).val();
+        if (selectedRoleId) {
+            $('#kseft-overview-table tbody tr').each(function() {
+                var roleIds = $(this).data('role-ids');
+                if (roleIds && roleIds.includes(parseInt(selectedRoleId))) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        } else {
+            $('#kseft-overview-table tbody tr').show();
+        }
+    });
+
+    $('#role_select').on('change', function() {
+        var selectedRoleId = $(this).val();
+        if (selectedRoleId) {
+            $('#kseft-overview-table tbody tr').each(function() {
+                var roleIds = $(this).data('role-ids');
+                if (roleIds && roleIds.includes(parseInt(selectedRoleId))) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        } else {
+            $('#kseft-overview-table tbody tr').show();
+        }
     });
 
 });
