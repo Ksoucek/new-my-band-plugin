@@ -23,7 +23,8 @@ function my_team_plugin_enqueue_scripts() {
         'post_id' => get_the_ID(), // Přidání post_id do lokalizovaného skriptu
         'api_key' => get_option('my_team_plugin_openrouteservice_api_key'), // Přidání API klíče do lokalizovaného skriptu
         'rest_url' => rest_url('google-calendar/v1/add-to-calendar'), // Přidání REST URL do lokalizovaného skriptu
-        'nonce' => wp_create_nonce('wp_rest') // Přidání nonce do lokalizovaného skriptu
+        'nonce' => wp_create_nonce('wp_rest'), // Přidání nonce do lokalizovaného skriptu
+        'site_url' => site_url() // Přidání site_url do lokalizovaného skriptu
      ));
     wp_enqueue_script('google-maps', 'https://maps.googleapis.com/maps/api/js?key=' . get_option('my_team_plugin_google_maps_api_key') . '&libraries=places', null, null, true);
     wp_enqueue_style('my-team-plugin-style', plugins_url('/css/my-team-plugin.css', __FILE__));
@@ -278,11 +279,6 @@ function my_team_plugin_display_ksefty() {
 }
 add_shortcode('display_ksefty', 'my_team_plugin_display_ksefty');
 
-function my_team_plugin_test_shortcode() {
-    return 'Test shortcode works!';
-}
-add_shortcode('test_shortcode', 'my_team_plugin_test_shortcode');
-
 function my_team_plugin_add_meta_boxes() {
     add_meta_box('kseft_details', 'Kšeft Details', 'my_team_plugin_render_meta_box', 'kseft', 'normal', 'high');
 }
@@ -416,7 +412,8 @@ function my_team_plugin_display_kseft_details($content) {
         } else {
             $custom_content .= '<span style="flex: 1;"></span>';
         }
-        $custom_content .= '<a href="' . site_url('/ksefty') . '" class="button" style="flex: 1; text-align: center;">Zpět na přehled kšeftů</a>';
+        $back_link = isset($_GET['from']) && $_GET['from'] === 'moje-ksefty' ? site_url('/moje-ksefty') : site_url('/ksefty');
+        $custom_content .= '<a href="' . $back_link . '" class="button" style="flex: 1; text-align: center;">Zpět na přehled kšeftů</a>';
         if ($next_kseft) {
             $custom_content .= '<a href="' . get_permalink($next_kseft->ID) . '" class="button" style="flex: 1; text-align: right;">Další kšeft</a>';
         } else {
@@ -424,9 +421,11 @@ function my_team_plugin_display_kseft_details($content) {
         }
         $custom_content .= '</div>';
 
-        // Přidání tlačítek pro úpravu kšeftu a přidání do Google Kalendáře
-        $custom_content .= '<a href="' . add_query_arg('kseft_id', $kseft_id, site_url('/manage-kseft')) . '" class="button">Upravit Kšeft</a>';
-        $custom_content .= '<button id="add-to-calendar-button" class="button">Přidat do Google Kalendáře</button>';
+        // Přidání tlačítek pro úpravu kšeftu a přidání do Google Kalendáře, pokud nepřicházíte ze stránky "moje-ksefty"
+        if (!isset($_GET['from']) || $_GET['from'] !== 'moje-ksefty') {
+            $custom_content .= '<a href="' . add_query_arg('kseft_id', $kseft_id, site_url('/manage-kseft')) . '" class="button">Upravit Kšeft</a>';
+            $custom_content .= '<button id="add-to-calendar-button" class="button">Přidat do Google Kalendáře</button>';
+        }
 
         $custom_content .= '<h3>Detaily Kšeftu</h3>';
         $custom_content .= '<p><strong>Lokace:</strong> ' . esc_html($location) . '</p>';
@@ -577,12 +576,12 @@ function my_team_plugin_save_role_confirmation() {
     $role_status = sanitize_text_field($_POST['role_status']);
     $role_substitute = sanitize_text_field($_POST['role_substitute']);
     $pickup_location = sanitize_text_field($_POST['pickup_location']);
-    $transport = sanitize_text_field($_POST['transport']);
+    $default_player = sanitize_text_field($_POST['default_player']);
 
     update_post_meta($post_id, 'role_status_' . $role_id, $role_status);
     update_post_meta($post_id, 'role_substitute_' . $role_id, $role_substitute);
     update_post_meta($post_id, 'pickup_location_' . $role_id, $pickup_location);
-    update_post_meta($post_id, 'transport_' . $role_id, $transport);
+    update_post_meta($post_id, 'default_player_' . $role_id, $default_player);
 
     echo 'Účast byla potvrzena.';
     wp_die();
@@ -975,18 +974,8 @@ function my_team_plugin_render_kseft_overview_page() {
 function my_team_plugin_kseft_overview_shortcode() {
     ob_start();
     ?>
-    <div>
-        <label for="role_select">Vyberte roli:</label>
-        <select id="role_select">
-            <option value="">-- Vyberte roli --</option>
-            <?php
-            $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
-            foreach ($roles as $role) {
-                echo '<option value="' . esc_attr($role->ID) . '">' . esc_html($role->post_title) . '</option>';
-            }
-            ?>
-        </select>
-    </div>
+    <div id="selected-role-display" style="margin-bottom: 20px; font-weight: bold; cursor: pointer;"></div>
+    <?php include plugin_dir_path(__FILE__) . 'templates/role-selection-modal.php'; ?>
     <table id="kseft-overview-table">
         <thead>
             <tr>
@@ -1018,7 +1007,7 @@ function my_team_plugin_kseft_overview_shortcode() {
                     $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
                     $formatted_date = date_i18n('D d.m.Y', strtotime($event_date));
                     ?>
-                    <tr data-role-ids="<?php echo esc_attr(json_encode($roles)); ?>">
+                    <tr data-kseft-id="<?php echo get_the_ID(); ?>" data-role-ids='<?php echo json_encode($roles); ?>'>
                         <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($formatted_date); ?></a></td>
                         <td><a href="<?php echo get_permalink(); ?>"><?php echo get_the_title(); ?></a></td>
                         <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($location); ?></a></td>
@@ -1045,4 +1034,60 @@ function my_team_plugin_kseft_overview_shortcode() {
     return ob_get_clean();
 }
 add_shortcode('kseft_overview', 'my_team_plugin_kseft_overview_shortcode');
+
+function my_team_plugin_get_ksefty_by_role() {
+    $role_id = intval($_POST['role_id']);
+    $ksefty = get_posts(array(
+        'post_type' => 'kseft',
+        'numberposts' => -1,
+        'meta_query' => array(
+            array(
+                'key' => 'kseft_obsazeni_template',
+                'compare' => 'EXISTS'
+            )
+        )
+    ));
+
+    $kseft_ids = array();
+    foreach ($ksefty as $kseft) {
+        $obsazeni_template_id = get_post_meta($kseft->ID, 'kseft_obsazeni_template', true);
+        $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
+        if (is_array($roles) && in_array($role_id, $roles)) {
+            $kseft_ids[] = $kseft->ID;
+        }
+    }
+
+    wp_send_json_success($kseft_ids);
+}
+add_action('wp_ajax_get_ksefty_by_role', 'my_team_plugin_get_ksefty_by_role');
+add_action('wp_ajax_nopriv_get_ksefty_by_role', 'my_team_plugin_get_ksefty_by_role');
+
+function my_team_plugin_get_role_details() {
+    $role_id = intval($_POST['role_id']);
+    $default_player = get_post_meta($role_id, 'role_default_player', true);
+    $default_pickup_location = get_post_meta($role_id, 'role_default_pickup_location', true);
+
+    $response = array(
+        'default_player' => $default_player,
+        'default_pickup_location' => $default_pickup_location
+    );
+
+    wp_send_json_success($response);
+}
+add_action('wp_ajax_get_role_details', 'my_team_plugin_get_role_details');
+add_action('wp_ajax_nopriv_get_role_details', 'my_team_plugin_get_role_details');
+
+function my_team_plugin_get_role_status() {
+    $kseft_id = intval($_POST['kseft_id']);
+    $role_id = intval($_POST['role_id']);
+    $role_status = get_post_meta($kseft_id, 'role_status_' . $role_id, true);
+
+    $response = array(
+        'role_status' => $role_status
+    );
+
+    wp_send_json_success($response);
+}
+add_action('wp_ajax_get_role_status', 'my_team_plugin_get_role_status');
+add_action('wp_ajax_nopriv_get_role_status', 'my_team_plugin_get_role_status');
 ?>
