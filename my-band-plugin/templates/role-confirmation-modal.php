@@ -2,7 +2,17 @@
     <div class="modal-content">
         <h3>Potvrdit účast</h3>
         <form id="role-confirmation-form">
-            <input type="hidden" name="role_id" id="role_id" value="">
+            <input type="hidden" name="kseft_id" id="kseft_id" value="">
+            <label for="role_id">Vyberte roli:</label>
+            <select name="role_id" id="role_id">
+                <option value="">-- Vyberte roli --</option>
+                <?php
+                $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
+                foreach ($roles as $role) {
+                    echo '<option value="' . esc_attr($role->ID) . '">' . esc_html($role->post_title) . '</option>';
+                }
+                ?>
+            </select>
             <label for="role_status">Stav účasti:</label>
             <select name="role_status" id="role_status">
                 <option value="Nepotvrzeno">Nepotvrzeno</option>
