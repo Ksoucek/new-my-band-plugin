@@ -27,71 +27,6 @@ jQuery(document).ready(function($) {
         });
     });
 
-    $('.role-confirmation').on('click', function() {
-        var roleId = $(this).data('role-id');
-        var defaultPlayer = $(this).data('default-player');
-        var defaultPickupLocation = $(this).data('default-pickup-location');
-        $('#role_id').val(roleId);
-        $('#role_status').val('Nepotvrzeno');
-        $('#role_substitute').val('');
-        $('#default_player').val(defaultPlayer);
-        $('#pickup_location').val('');
-        $('#pickup_location').data('default-pickup-location', defaultPickupLocation);
-        $('#substitute-field').hide();
-        $('#pickup-location-field').hide();
-        $('#default-player-field').hide();
-        $('#default-pickup-location-field').show(); // Přidání pole "Výchozí místo vyzvednutí"
-        $('#role-confirmation-modal').show();
-    });
-
-    $('#role_status').on('change', function() {
-        if ($(this).val() === 'Záskok') {
-            $('#substitute-field').show();
-            $('#pickup-location-field').show();
-            $('#default-player-field').hide();
-            $('#pickup_location').val('');
-        } else if ($(this).val() === 'Jdu') {
-            $('#substitute-field').hide();
-            $('#pickup-location-field').show();
-            $('#default-player-field').show();
-            var defaultPickupLocation = $('#pickup_location').data('default-pickup-location');
-            $('#pickup_location').val(defaultPickupLocation);
-        } else {
-            $('#substitute-field').hide();
-            $('#pickup-location-field').hide();
-            $('#default-player-field').hide();
-        }
-    });
-
-    $('#close-modal').on('click', function() {
-        $('#role-confirmation-modal').hide();
-    });
-
-    $('#role-confirmation-form').on('submit', function(e) {
-        e.preventDefault();
-        var roleStatus = $('#role_status').val();
-        var pickupLocation = $('#pickup_location').val();
-        if ((roleStatus === 'Jdu' || roleStatus === 'Záskok') && !pickupLocation) {
-            alert('Prosím vyplňte Místo vyzvednutí.');
-            return;
-        }
-        var data = {
-            action: 'save_role_confirmation',
-            post_id: myTeamPlugin.post_id,
-            role_id: $('#role_id').val(),
-            role_status: roleStatus,
-            role_substitute: $('#role_substitute').val(),
-            pickup_location: pickupLocation,
-            default_player: $('#default_player').val(),
-            transport: $('select[name="transport_' + $('#role_id').val() + '"]').val()
-        };
-        $.post(myTeamPlugin.ajax_url, data, function(response) {
-            $('#role-confirmation-modal').hide();
-            updateRoleButton(data.role_id, data.role_status, data.default_player, data.role_substitute, data.pickup_location, data.transport);
-            updateKseftStatus();
-        });
-    });
-
     $('.transport-select').on('change', function() {
         var roleId = $(this).data('role-id');
         var transport = $(this).val();
@@ -149,48 +84,6 @@ jQuery(document).ready(function($) {
             console.log('Pickup time saved:', response);
         });
     });
-
-    function updateRoleButton(roleId, roleStatus, defaultPlayer, roleSubstitute, pickupLocation, transport) {
-        var button = $('.role-confirmation[data-role-id="' + roleId + '"]');
-        button.removeClass('role-confirmation-nepotvrzeno role-confirmation-jdu role-confirmation-zaskok');
-        var confirmationText = roleStatus;
-        if (roleStatus === 'Jdu') {
-            button.addClass('role-confirmation-jdu');
-            confirmationText = defaultPlayer;
-        } else if (roleStatus === 'Záskok') {
-            button.addClass('role-confirmation-zaskok');
-            confirmationText = 'Záskok: ' + roleSubstitute;
-        } else {
-            button.addClass('role-confirmation-nepotvrzeno');
-        }
-        button.text(roleStatus);
-        $('#role_status').val(roleStatus);
-        button.closest('tr').find('td:nth-child(2)').text(confirmationText);
-        button.closest('tr').find('td:nth-child(3)').text(pickupLocation);
-        button.closest('tr').find('td:nth-child(4)').find('select').val(transport);
-    }
-
-    function updateKseftStatus() {
-        var allConfirmed = true;
-        var hasSubstitute = false;
-        $('.role-confirmation').each(function() {
-            var roleStatus = $(this).hasClass('role-confirmation-jdu') ? 'Jdu' : ($(this).hasClass('role-confirmation-zaskok') ? 'Záskok' : 'Nepotvrzeno');
-            if (roleStatus === 'Záskok') {
-                hasSubstitute = true;
-            }
-            if (roleStatus !== 'Jdu' && roleStatus !== 'Záskok') {
-                allConfirmed = false;
-            }
-        });
-        var kseftButton = $('.kseft-status-button');
-        if (allConfirmed) {
-            kseftButton.removeClass('neobsazeno').addClass('obsazeno');
-            kseftButton.text(hasSubstitute ? 'Obsazeno se záskokem' : 'Obsazeno');
-        } else {
-            kseftButton.removeClass('obsazeno').addClass('neobsazeno');
-            kseftButton.text('Neobsazeno');
-        }
-   }
 
     function initializeAutocomplete(inputId, mapId) {
         var input = document.getElementById(inputId);
@@ -314,25 +207,6 @@ jQuery(document).ready(function($) {
 
     $('#role-confirmation-modal .modal-content').css({
         'padding': '20px' // Zvýšení vnitřního odsazení
-    });
-
-    $('.confirm-role-button').on('click', function() {
-        var kseftId = $(this).data('kseft-id');
-        var selectedRoleId = $('#role_select').val();
-        if (!selectedRoleId) {
-            alert('Prosím vyberte roli.');
-            return;
-        }
-        $('#kseft_id').val(kseftId);
-        $('#role_id').val(selectedRoleId);
-        $('#role_status').val('Nepotvrzeno');
-        $('#role_substitute').val('');
-        $('#pickup_location').val('');
-        $('#default_player').val('');
-        $('#substitute-field').hide();
-        $('#pickup-location-field').hide();
-        $('#default-player-field').hide();
-        $('#role-confirmation-modal').show();
     });
 
     $('#role_status').on('change', function() {

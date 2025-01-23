@@ -18,6 +18,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/google-calendar.php'; // Nač
 
 function my_team_plugin_enqueue_scripts() {
     wp_enqueue_script('my-team-plugin-script', plugins_url('/js/my-team-plugin.js', __FILE__), array('jquery'), '1.0', true);
+    wp_enqueue_script('role-selection-script', plugins_url('/js/role-selection.js', __FILE__), array('jquery'), '1.0', true); // Zahrnutí nového JS souboru
     wp_enqueue_script('google-calendar-script', plugins_url('/js/google-calendar.js', __FILE__), array('jquery', 'my-team-plugin-script'), '1.0', true);
     wp_localize_script('my-team-plugin-script', 'myTeamPlugin', array(
         'ajax_url' => admin_url('admin-ajax.php'),
