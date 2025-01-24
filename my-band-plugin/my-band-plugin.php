@@ -13,7 +13,6 @@ if (file_exists($autoload_path)) {
     require_once $autoload_path; // Načtení knihovny Google API PHP Client
 }
 
-require_once plugin_dir_path(__FILE__) . 'includes/transport-optimization.php';
 require_once plugin_dir_path(__FILE__) . 'includes/google-calendar.php'; // Načtení souboru pro Google Kalendář
 
 function my_team_plugin_enqueue_scripts() {
@@ -228,7 +227,7 @@ function my_team_plugin_display_ksefty() {
     $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>'; // Přesunutí tlačítka nahoru
     if ($ksefty->have_posts()) {
         $output .= '<table>';
-        $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></thead>';
+        $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th><th>Akce</th></thead>'; // Přidání sloupce Akce
         $output .= '<tbody>';
         while ($ksefty->have_posts()) {
             $ksefty->the_post();
@@ -267,6 +266,7 @@ function my_team_plugin_display_ksefty() {
             $output .= '<td><a href="' . get_permalink() . '">' . esc_html($location) . '</a></td>';
             $output .= '<td><a href="' . get_permalink() . '" class="button kseft-status-button ' . esc_attr($obsazeni_class) . '">' . esc_html($obsazeni_text) . '</a></td>';
             $output .= '<td><a href="' . get_permalink() . '">' . esc_html($status) . '</a></td>'; // Přidání odkazu na stav
+            $output .= '<td><button class="button confirm-role-button" data-kseft-id="' . get_the_ID() . '">Potvrdit účast</button></td>'; // Přidání tlačítka pro potvrzení účasti
             $output .= '</tr>';
         }
         $output .= '</tbody>';
