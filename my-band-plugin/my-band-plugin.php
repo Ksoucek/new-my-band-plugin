@@ -227,7 +227,7 @@ function my_team_plugin_display_ksefty() {
     $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>'; // Přesunutí tlačítka nahoru
     if ($ksefty->have_posts()) {
         $output .= '<table>';
-        $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th><th>Akce</th></thead>'; // Přidání sloupce Akce
+        $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th><th>Lokace</th><th>Čas vyzvednutí</th><th>Akce</th></thead>'; // Přidání sloupců Lokace a Čas vyzvednutí
         $output .= '<tbody>';
         while ($ksefty->have_posts()) {
             $ksefty->the_post();
@@ -238,6 +238,8 @@ function my_team_plugin_display_ksefty() {
             $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
             $all_confirmed = true;
             $has_substitute = false;
+            $pickup_location = '';
+            $pickup_time = '';
             if ($roles) {
                 foreach ($roles as $role_id) {
                     $role_status = get_post_meta(get_the_ID(), 'role_status_' . $role_id, true);
@@ -247,6 +249,10 @@ function my_team_plugin_display_ksefty() {
                     if ($role_status !== 'Jdu' && $role_status !== 'Záskok') {
                         $all_confirmed = false;
                         break;
+                    }
+                    if ($role_id == sessionStorage.getItem('selectedRoleId')) {
+                        $pickup_location = get_post_meta(get_the_ID(), 'pickup_location_' . $role_id, true);
+                        $pickup_time = get_post_meta(get_the_ID(), 'pickup_time_' . $role_id, true);
                     }
                 }
             } else {
@@ -266,6 +272,8 @@ function my_team_plugin_display_ksefty() {
             $output .= '<td><a href="' . get_permalink() . '">' . esc_html($location) . '</a></td>';
             $output .= '<td><a href="' . get_permalink() . '" class="button kseft-status-button ' . esc_attr($obsazeni_class) . '">' . esc_html($obsazeni_text) . '</a></td>';
             $output .= '<td><a href="' . get_permalink() . '">' . esc_html($status) . '</a></td>'; // Přidání odkazu na stav
+            $output .= '<td>' . esc_html($pickup_location) . '</td>'; // Přidání sloupce Lokace
+            $output .= '<td>' . esc_html($pickup_time) . '</td>'; // Přidání sloupce Čas vyzvednutí
             $output .= '<td><button class="button confirm-role-button" data-kseft-id="' . get_the_ID() . '">Potvrdit účast</button></td>'; // Přidání tlačítka pro potvrzení účasti
             $output .= '</tr>';
         }
@@ -414,7 +422,7 @@ function my_team_plugin_display_kseft_details($content) {
         } else {
             $custom_content .= '<span style="flex: 1;"></span>';
         }
-        $back_link = isset($_GET['from']) && $_GET['from'] === 'moje-ksefty' ? site_url('/moje-ksefty') : site_url('/ksefty');
+        $back_link = isset($_GET['from']) && $_GET['from'] === '/ksefty' ?  site_url('/ksefty') :site_url('/moje-ksefty');
         $custom_content .= '<a href="' . $back_link . '" class="button" style="flex: 1; text-align: center;">Zpět na přehled kšeftů</a>';
         if ($next_kseft) {
             $custom_content .= '<a href="' . get_permalink($next_kseft->ID) . '" class="button" style="flex: 1; text-align: right;">Další kšeft</a>';

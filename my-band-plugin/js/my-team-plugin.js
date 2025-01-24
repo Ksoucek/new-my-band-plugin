@@ -284,4 +284,79 @@ jQuery(document).ready(function($) {
             $('#kseft-overview-table tbody tr').show();
         }
     });
+     function updateConfirmButton(kseftId, roleId) {
+        $.post(myTeamPlugin.ajax_url, {
+            action: 'get_role_status',
+            kseft_id: kseftId,
+            role_id: roleId
+        }, function(response) {
+            if (response.success) {
+                var roleStatus = response.data.role_status;
+                var button = $('.confirm-role-button[data-kseft-id="' + kseftId + '"]');
+                button.removeClass('role-confirmation-nepotvrzeno role-confirmation-jdu role-confirmation-zaskok');
+                if (roleStatus === 'Jdu') {
+                    button.addClass('role-confirmation-jdu');
+                    button.text('Jdu');
+                } else if (roleStatus === 'Záskok') {
+                    button.addClass('role-confirmation-zaskok');
+                    button.text('Záskok');
+                } else {
+                    button.addClass('role-confirmation-nepotvrzeno');
+                    button.text('Nepotvrzeno');
+                }
+
+                // Aktualizace sloupců Lokace a Čas vyzvednutí
+                var pickupLocation = response.data.pickup_location;
+                var pickupTime = response.data.pickup_time;
+                button.closest('tr').find('td:nth-child(6)').text(pickupLocation);
+                button.closest('tr').find('td:nth-child(7)').text(pickupTime);
+            } else {
+                console.error('Error fetching role status:', response.error);
+            }
+        });
+    }
+
+    // Přidání funkce pro potvrzení účasti za zvolenou roli
+    $('.confirm-role-button, .role-confirmation').on('click', function() {
+        const kseftId = $(this).data('kseft-id');
+        const currentRole = {
+            roleId: sessionStorage.getItem('selectedRoleId'),
+            roleText: sessionStorage.getItem('selectedRoleText')
+        };
+        if (!currentRole.roleId) {
+            alert('Prosím vyberte roli.');
+            return;
+        }
+
+        $.post(myTeamPlugin.ajax_url, {
+            action: 'get_role_details',
+            role_id: currentRole.roleId
+        }, function(response) {
+            if (response.success) {
+                const roleDetails = response.data;
+                $('#kseft_id').val(kseftId);
+                $('#role_id').val(currentRole.roleId);
+                $('#role_status').val('Nepotvrzeno');
+                $('#role_substitute').val('');
+                $('#pickup_location').val(roleDetails.default_pickup_location);
+                $('#default_player').val(roleDetails.default_player);
+                $('#substitute-field').hide();
+                $('#pickup-location-field').hide();
+                $('#default-player-field').hide();
+                $('#role-confirmation-modal').show();
+            } else {
+                console.error('Error fetching role details:', response.error);
+            }
+        });
+    });
+
+    // Aktualizace tlačítek na přehledu "moje-ksefty"
+    $('#kseft-overview-table tbody tr').each(function() {
+        var kseftId = $(this).data('kseft-id');
+        var roleIds = $(this).data('role-ids');
+        var currentRoleId = sessionStorage.getItem('selectedRoleId');
+        if (roleIds && roleIds.includes(parseInt(currentRoleId))) {
+            updateConfirmButton(kseftId, currentRoleId);
+        }
+    });
 });
