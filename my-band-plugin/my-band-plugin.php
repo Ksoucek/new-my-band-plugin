@@ -13,7 +13,6 @@ if (file_exists($autoload_path)) {
     require_once $autoload_path; // Načtení knihovny Google API PHP Client
 }
 
-require_once plugin_dir_path(__FILE__) . 'includes/transport-optimization.php';
 require_once plugin_dir_path(__FILE__) . 'includes/google-calendar.php'; // Načtení souboru pro Google Kalendář
 
 function my_team_plugin_enqueue_scripts() {
