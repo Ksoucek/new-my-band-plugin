@@ -239,6 +239,9 @@ function my_team_plugin_display_ksefty() {
             $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
             $all_confirmed = true;
             $has_substitute = false;
+            $pickup_location = '';
+            $pickup_time = '';
+            $current_role_id = isset($_COOKIE['selectedRoleId']) ? intval($_COOKIE['selectedRoleId']) : 0;
             if ($roles) {
                 foreach ($roles as $role_id) {
                     $role_status = get_post_meta(get_the_ID(), 'role_status_' . $role_id, true);
@@ -248,6 +251,10 @@ function my_team_plugin_display_ksefty() {
                     if ($role_status !== 'Jdu' && $role_status !== 'Záskok') {
                         $all_confirmed = false;
                         break;
+                    }
+                    if ($role_id == $current_role_id) {
+                        $pickup_location = get_post_meta(get_the_ID(), 'pickup_location_' . $role_id, true);
+                        $pickup_time = get_post_meta(get_the_ID(), 'pickup_time_' . $role_id, true);
                     }
                 }
             } else {

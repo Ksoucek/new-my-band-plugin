@@ -11,15 +11,20 @@ jQuery(document).ready(function($) {
 
     function setCurrentRole(roleId, roleText) {
         $('#selected-role-display').text(`Zvolená role: ${roleText}`);
-        sessionStorage.setItem('selectedRoleId', roleId);
-        sessionStorage.setItem('selectedRoleText', roleText);
+        document.cookie = `selectedRoleId=${roleId}; path=/`;
+        document.cookie = `selectedRoleText=${roleText}; path=/`;
         filterKseftByRole(roleId);
     }
 
     function getCurrentRole() {
+        const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+            const [key, value] = cookie.split('=').map(c => c.trim());
+            acc[key] = value;
+            return acc;
+        }, {});
         return {
-            roleId: sessionStorage.getItem('selectedRoleId'),
-            roleText: sessionStorage.getItem('selectedRoleText')
+            roleId: cookies.selectedRoleId,
+            roleText: cookies.selectedRoleText
         };
     }
 
@@ -90,8 +95,8 @@ jQuery(document).ready(function($) {
     $('.confirm-role-button, .role-confirmation').on('click', function() {
         const kseftId = $(this).data('kseft-id');
         const currentRole = {
-            roleId: sessionStorage.getItem('selectedRoleId'),
-            roleText: sessionStorage.getItem('selectedRoleText')
+            roleId: getCurrentRole().roleId,
+            roleText: getCurrentRole().roleText
         };
         if (!currentRole.roleId) {
             alert('Prosím vyberte roli.');
@@ -221,6 +226,16 @@ jQuery(document).ready(function($) {
             });
         } else {
             $('#kseft-overview-table tbody tr').show();
+        }
+    });
+
+    // Aktualizace tlačítek na přehledu "moje-ksefty"
+    $('#kseft-overview-table tbody tr').each(function() {
+        var kseftId = $(this).data('kseft-id');
+        var roleIds = $(this).data('role-ids');
+        var currentRoleId = getCurrentRole().roleId;
+        if (roleIds && roleIds.includes(parseInt(currentRoleId))) {
+            updateConfirmButton(kseftId, currentRoleId);
         }
     });
 });
