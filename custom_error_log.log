@@ -1,0 +1,89 @@
+[2025-01-18 09:57:27] handle_add_to_calendar_request called
+[2025-01-18 09:57:27] Event details received: {"summary":"igno ITTOTOOTA","location":"Wolkerova, Hul\u00edn, \u010cesko","start":{"dateTime":"2025-01-17T11:00:00+00:00","timeZone":"Europe\/Prague"},"end":{"dateTime":"2025-01-17T18:00:00+00:00","timeZone":"Europe\/Prague"}}
+[2025-01-18 09:57:27] add_event_to_google_calendar called
+[2025-01-18 09:57:28] Event added to Google Calendar: {"anyoneCanAddSelf":null,"attendeesOmitted":null,"colorId":null,"created":"2025-01-18T09:57:28.000Z","description":null,"endTimeUnspecified":null,"etag":"\"3474388496236000\"","eventType":"default","guestsCanInviteOthers":null,"guestsCanModify":null,"guestsCanSeeOtherGuests":null,"hangoutLink":null,"htmlLink":"https:\/\/www.google.com\/calendar\/event?eid=N3U4Zjc2YnE2MzE0cHJhb2Q2YThldjdnNDQgb2xvMHYyOG5lY2R2MjduNm1nN3BzdWQyZGNAZw","iCalUID":"7u8f76bq6314praod6a8ev7g44@google.com","id":"7u8f76bq6314praod6a8ev7g44","kind":"calendar#event","location":"Wolkerova, Hul\u00edn, \u010cesko","locked":null,"privateCopy":null,"recurrence":null,"recurringEventId":null,"sequence":0,"status":"confirmed","summary":"igno ITTOTOOTA","transparency":null,"updated":"2025-01-18T09:57:28.118Z","visibility":null,"creator":{"displayName":null,"email":"hanackaserviceacc@hanackabrest.iam.gserviceaccount.com","id":null,"self":null},"organizer":{"displayName":"Hana\u010dka - Intern\u00ed kalend\u00e1\u0159 akc\u00ed","email":"olo0v28necdv27n6mg7psud2dc@group.calendar.google.com","id":null,"self":true},"start":{"date":null,"dateTime":"2025-01-17T12:00:00+01:00","timeZone":"Europe\/Prague"},"end":{"date":null,"dateTime":"2025-01-17T19:00:00+01:00","timeZone":"Europe\/Prague"},"reminders":{"useDefault":true}}
+[2025-01-18 09:59:15] handle_add_to_calendar_request called
+[2025-01-18 09:59:15] Event details received: {"summary":"igno ITTOTOOTA","location":"Wolkerova, Hul\u00edn, \u010cesko","start":{"dateTime":"2025-01-17T11:00:00+00:00","timeZone":"Europe\/Prague"},"end":{"dateTime":"2025-01-17T18:00:00+00:00","timeZone":"Europe\/Prague"}}
+[2025-01-18 09:59:15] add_event_to_google_calendar called
+[2025-01-18 09:59:16] Event added to Google Calendar: {"anyoneCanAddSelf":null,"attendeesOmitted":null,"colorId":null,"created":"2025-01-18T09:59:16.000Z","description":null,"endTimeUnspecified":null,"etag":"\"3474388712362000\"","eventType":"default","guestsCanInviteOthers":null,"guestsCanModify":null,"guestsCanSeeOtherGuests":null,"hangoutLink":null,"htmlLink":"https:\/\/www.google.com\/calendar\/event?eid=OWc5aTlxMGNrN2Z2MjA1ZnBnNjhvM28zYnMgb2xvMHYyOG5lY2R2MjduNm1nN3BzdWQyZGNAZw","iCalUID":"9g9i9q0ck7fv205fpg68o3o3bs@google.com","id":"9g9i9q0ck7fv205fpg68o3o3bs","kind":"calendar#event","location":"Wolkerova, Hul\u00edn, \u010cesko","locked":null,"privateCopy":null,"recurrence":null,"recurringEventId":null,"sequence":0,"status":"confirmed","summary":"igno ITTOTOOTA","transparency":null,"updated":"2025-01-18T09:59:16.181Z","visibility":null,"creator":{"displayName":null,"email":"hanackaserviceacc@hanackabrest.iam.gserviceaccount.com","id":null,"self":null},"organizer":{"displayName":"Hana\u010dka - Intern\u00ed kalend\u00e1\u0159 akc\u00ed","email":"olo0v28necdv27n6mg7psud2dc@group.calendar.google.com","id":null,"self":true},"start":{"date":null,"dateTime":"2025-01-17T12:00:00+01:00","timeZone":"Europe\/Prague"},"end":{"date":null,"dateTime":"2025-01-17T19:00:00+01:00","timeZone":"Europe\/Prague"},"reminders":{"useDefault":true}}
+[2025-01-18 10:09:05] handle_add_to_calendar_request called
+[2025-01-18 10:09:05] Event details received: {"summary":"igno ITTOTOOTA","location":"Wolkerova, Hul\u00edn, \u010cesko","start":{"dateTime":"2025-01-17T11:00:00+00:00","timeZone":"Europe\/Prague"},"end":{"dateTime":"2025-01-17T18:00:00+00:00","timeZone":"Europe\/Prague"}}
+[2025-01-18 10:09:05] add_event_to_google_calendar called
+[2025-01-18 10:09:06] Event added to Google Calendar: {"anyoneCanAddSelf":null,"attendeesOmitted":null,"colorId":null,"created":"2025-01-18T10:09:06.000Z","description":null,"endTimeUnspecified":null,"etag":"\"3474389892940000\"","eventType":"default","guestsCanInviteOthers":null,"guestsCanModify":null,"guestsCanSeeOtherGuests":null,"hangoutLink":null,"htmlLink":"https:\/\/www.google.com\/calendar\/event?eid=a21mZXEzOTMwa2EzZGQwaGtsbHJxMHBkdG8gb2xvMHYyOG5lY2R2MjduNm1nN3BzdWQyZGNAZw","iCalUID":"kmfeq3930ka3dd0hkllrq0pdto@google.com","id":"kmfeq3930ka3dd0hkllrq0pdto","kind":"calendar#event","location":"Wolkerova, Hul\u00edn, \u010cesko","locked":null,"privateCopy":null,"recurrence":null,"recurringEventId":null,"sequence":0,"status":"confirmed","summary":"igno ITTOTOOTA","transparency":null,"updated":"2025-01-18T10:09:06.470Z","visibility":null,"creator":{"displayName":null,"email":"hanackaserviceacc@hanackabrest.iam.gserviceaccount.com","id":null,"self":null},"organizer":{"displayName":"Hana\u010dka - Intern\u00ed kalend\u00e1\u0159 akc\u00ed","email":"olo0v28necdv27n6mg7psud2dc@group.calendar.google.com","id":null,"self":true},"start":{"date":null,"dateTime":"2025-01-17T12:00:00+01:00","timeZone":"Europe\/Prague"},"end":{"date":null,"dateTime":"2025-01-17T19:00:00+01:00","timeZone":"Europe\/Prague"},"reminders":{"useDefault":true}}
+[2025-01-18 10:11:37] handle_add_to_calendar_request called
+[2025-01-18 10:11:37] Event details received: {"summary":"igno ITTOTOOTA","location":"Wolkerova, Hul\u00edn, \u010cesko","start":{"dateTime":"2025-01-17T11:00:00+00:00","timeZone":"Europe\/Prague"},"end":{"dateTime":"2025-01-17T18:00:00+00:00","timeZone":"Europe\/Prague"}}
+[2025-01-18 10:11:37] add_event_to_google_calendar called
+[2025-01-18 10:11:38] Event added to Google Calendar: {"anyoneCanAddSelf":null,"attendeesOmitted":null,"colorId":null,"created":"2025-01-18T10:11:38.000Z","description":null,"endTimeUnspecified":null,"etag":"\"3474390196476000\"","eventType":"default","guestsCanInviteOthers":null,"guestsCanModify":null,"guestsCanSeeOtherGuests":null,"hangoutLink":null,"htmlLink":"https:\/\/www.google.com\/calendar\/event?eid=NDlvbjUwMWVjYm9kYTRhdnNkOWFqZnE0b28gb2xvMHYyOG5lY2R2MjduNm1nN3BzdWQyZGNAZw","iCalUID":"49on501ecboda4avsd9ajfq4oo@google.com","id":"49on501ecboda4avsd9ajfq4oo","kind":"calendar#event","location":"Wolkerova, Hul\u00edn, \u010cesko","locked":null,"privateCopy":null,"recurrence":null,"recurringEventId":null,"sequence":0,"status":"confirmed","summary":"igno ITTOTOOTA","transparency":null,"updated":"2025-01-18T10:11:38.238Z","visibility":null,"creator":{"displayName":null,"email":"hanackaserviceacc@hanackabrest.iam.gserviceaccount.com","id":null,"self":null},"organizer":{"displayName":"Hana\u010dka - Intern\u00ed kalend\u00e1\u0159 akc\u00ed","email":"olo0v28necdv27n6mg7psud2dc@group.calendar.google.com","id":null,"self":true},"start":{"date":null,"dateTime":"2025-01-17T12:00:00+01:00","timeZone":"Europe\/Prague"},"end":{"date":null,"dateTime":"2025-01-17T19:00:00+01:00","timeZone":"Europe\/Prague"},"reminders":{"useDefault":true}}
+[2025-01-18 10:15:32] handle_add_to_calendar_request called
+[2025-01-18 10:15:32] Event details received: {"summary":"igno ITTOTOOTA","location":"Wolkerova, Hul\u00edn, \u010cesko","start":{"dateTime":"2025-01-17T11:00:00+00:00","timeZone":"Europe\/Prague"},"end":{"dateTime":"2025-01-17T18:00:00+00:00","timeZone":"Europe\/Prague"}}
+[2025-01-18 10:15:32] add_event_to_google_calendar called
+[2025-01-18 10:15:33] Event added to Google Calendar: {"anyoneCanAddSelf":null,"attendeesOmitted":null,"colorId":null,"created":"2025-01-18T10:15:32.000Z","description":null,"endTimeUnspecified":null,"etag":"\"3474390665652000\"","eventType":"default","guestsCanInviteOthers":null,"guestsCanModify":null,"guestsCanSeeOtherGuests":null,"hangoutLink":null,"htmlLink":"https:\/\/www.google.com\/calendar\/event?eid=ajVpbGY1cmY1MGk4cDAwNGFpMGhxcGYxbTggb2xvMHYyOG5lY2R2MjduNm1nN3BzdWQyZGNAZw","iCalUID":"j5ilf5rf50i8p004ai0hqpf1m8@google.com","id":"j5ilf5rf50i8p004ai0hqpf1m8","kind":"calendar#event","location":"Wolkerova, Hul\u00edn, \u010cesko","locked":null,"privateCopy":null,"recurrence":null,"recurringEventId":null,"sequence":0,"status":"confirmed","summary":"igno ITTOTOOTA","transparency":null,"updated":"2025-01-18T10:15:32.826Z","visibility":null,"creator":{"displayName":null,"email":"hanackaserviceacc@hanackabrest.iam.gserviceaccount.com","id":null,"self":null},"organizer":{"displayName":"Hana\u010dka - Intern\u00ed kalend\u00e1\u0159 akc\u00ed","email":"olo0v28necdv27n6mg7psud2dc@group.calendar.google.com","id":null,"self":true},"start":{"date":null,"dateTime":"2025-01-17T12:00:00+01:00","timeZone":"Europe\/Prague"},"end":{"date":null,"dateTime":"2025-01-17T19:00:00+01:00","timeZone":"Europe\/Prague"},"reminders":{"useDefault":true}}
+[2025-01-18 10:17:03] handle_add_to_calendar_request called
+[2025-01-18 10:17:03] Event details received: {"summary":"igno ITTOTOOTA","location":"Wolkerova, Hul\u00edn, \u010cesko","start":{"dateTime":"2025-01-17T11:00:00+00:00","timeZone":"Europe\/Prague"},"end":{"dateTime":"2025-01-17T18:00:00+00:00","timeZone":"Europe\/Prague"}}
+[2025-01-18 10:17:03] add_event_to_google_calendar called
+[2025-01-18 10:17:04] PHP Event added to Google Calendar: {"anyoneCanAddSelf":null,"attendeesOmitted":null,"colorId":null,"created":"2025-01-18T10:17:03.000Z","description":null,"endTimeUnspecified":null,"etag":"\"3474390847884000\"","eventType":"default","guestsCanInviteOthers":null,"guestsCanModify":null,"guestsCanSeeOtherGuests":null,"hangoutLink":null,"htmlLink":"https:\/\/www.google.com\/calendar\/event?eid=bnF0bzdmaDN1M25lOXJvYnZzbThvcXFva28gb2xvMHYyOG5lY2R2MjduNm1nN3BzdWQyZGNAZw","iCalUID":"nqto7fh3u3ne9robvsm8oqqoko@google.com","id":"nqto7fh3u3ne9robvsm8oqqoko","kind":"calendar#event","location":"Wolkerova, Hul\u00edn, \u010cesko","locked":null,"privateCopy":null,"recurrence":null,"recurringEventId":null,"sequence":0,"status":"confirmed","summary":"igno ITTOTOOTA","transparency":null,"updated":"2025-01-18T10:17:03.942Z","visibility":null,"creator":{"displayName":null,"email":"hanackaserviceacc@hanackabrest.iam.gserviceaccount.com","id":null,"self":null},"organizer":{"displayName":"Hana\u010dka - Intern\u00ed kalend\u00e1\u0159 akc\u00ed","email":"olo0v28necdv27n6mg7psud2dc@group.calendar.google.com","id":null,"self":true},"start":{"date":null,"dateTime":"2025-01-17T12:00:00+01:00","timeZone":"Europe\/Prague"},"end":{"date":null,"dateTime":"2025-01-17T19:00:00+01:00","timeZone":"Europe\/Prague"},"reminders":{"useDefault":true}}
+[2025-01-18 10:31:09] handle_add_to_calendar_request called
+[2025-01-18 10:31:09] Event details received: {"summary":"igno ITTOTOOTA","location":"Wolkerova, Hul\u00edn, \u010cesko","start":{"dateTime":"2025-01-17T11:00:00+00:00","timeZone":"Europe\/Prague"},"end":{"dateTime":"2025-01-17T18:00:00+00:00","timeZone":"Europe\/Prague"}}
+[2025-01-18 10:31:09] add_event_to_google_calendar called
+[2025-01-18 10:31:10] PHP Event added to Google Calendar: {"anyoneCanAddSelf":null,"attendeesOmitted":null,"colorId":null,"created":"2025-01-18T10:31:09.000Z","description":null,"endTimeUnspecified":null,"etag":"\"3474392539642000\"","eventType":"default","guestsCanInviteOthers":null,"guestsCanModify":null,"guestsCanSeeOtherGuests":null,"hangoutLink":null,"htmlLink":"https:\/\/www.google.com\/calendar\/event?eid=Z2pvb3VoMjlmMDdnZzlpNDZlYjI0MWZzYzQgb2xvMHYyOG5lY2R2MjduNm1nN3BzdWQyZGNAZw","iCalUID":"gjoouh29f07gg9i46eb241fsc4@google.com","id":"gjoouh29f07gg9i46eb241fsc4","kind":"calendar#event","location":"Wolkerova, Hul\u00edn, \u010cesko","locked":null,"privateCopy":null,"recurrence":null,"recurringEventId":null,"sequence":0,"status":"confirmed","summary":"igno ITTOTOOTA","transparency":null,"updated":"2025-01-18T10:31:09.821Z","visibility":null,"creator":{"displayName":null,"email":"hanackaserviceacc@hanackabrest.iam.gserviceaccount.com","id":null,"self":null},"organizer":{"displayName":"Hana\u010dka - Intern\u00ed kalend\u00e1\u0159 akc\u00ed","email":"olo0v28necdv27n6mg7psud2dc@group.calendar.google.com","id":null,"self":true},"start":{"date":null,"dateTime":"2025-01-17T12:00:00+01:00","timeZone":"Europe\/Prague"},"end":{"date":null,"dateTime":"2025-01-17T19:00:00+01:00","timeZone":"Europe\/Prague"},"reminders":{"useDefault":true}}
+Received event details: Array
+(
+    [summary] => Kšeft
+    [location] => 
+    [start] => Array
+        (
+            [date] => 
+        )
+
+    [end] => Array
+        (
+            [date] => 
+        )
+
+)
+Received post_id: 14954Received event details: Array
+(
+    [summary] => Kšeft
+    [location] => 
+    [start] => Array
+        (
+            [date] => 
+        )
+
+    [end] => Array
+        (
+            [date] => 
+        )
+
+)
+Received post_id: 14954Received event details: Array
+(
+    [summary] => Kšeft
+    [location] => 
+    [start] => Array
+        (
+            [date] => 
+        )
+
+    [end] => Array
+        (
+            [date] => 
+        )
+
+)
+Received post_id: 14954Received event details: Array
+(
+    [summary] => Kšeft
+    [location] => 
+    [start] => Array
+        (
+            [date] => 
+        )
+
+    [end] => Array
+        (
+            [date] => 
+        )
+
+)
+Received post_id: 14954

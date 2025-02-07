@@ -228,24 +228,42 @@ jQuery(document).ready(function($) {
         }
     });
 
+    function updateRoleButton(kseftId, roleId, roleStatus, roleSubstitute, pickupLocation) {
+        var button = $(`.role-confirmation[data-kseft-id="${kseftId}"][data-role-id="${roleId}"]`);
+        button.removeClass('role-confirmation-nepotvrzeno role-confirmation-jdu role-confirmation-zaskok');
+        if (roleStatus === 'Jdu') {
+            button.addClass('role-confirmation-jdu');
+            button.text('Jdu');
+        } else if (roleStatus === 'Záskok') {
+            button.addClass('role-confirmation-zaskok');
+            button.text('Záskok: ' + roleSubstitute);
+        } else {
+            button.addClass('role-confirmation-nepotvrzeno');
+            button.text('Nepotvrzeno');
+        }
+        button.closest('tr').find('.pickup-location').text(pickupLocation);
+    }
+
     $('#role-confirmation-form').on('submit', function(e) {
         e.preventDefault();
-        var kseftId = $('#kseft_id').val();
-        var roleId = $('#role_id').val();
-        var roleStatus = $('#role_status').val();
-        var roleSubstitute = $('#role_substitute').val();
-        var pickupLocation = $('#pickup_location').val();
-
-        $.post(myTeamPlugin.ajax_url, {
+        var data = {
             action: 'save_role_confirmation',
-            post_id: kseftId,
-            role_id: roleId,
-            role_status: roleStatus,
-            role_substitute: roleSubstitute,
-            pickup_location: pickupLocation
-        }, function(response) {
-            $('#role-confirmation-modal').hide();
-            location.reload();
+            post_id: $('#kseft_id').val(),
+            role_id: $('#role_id').val(),
+            role_status: $('#role_status').val(),
+            role_substitute: $('#role_substitute').val(),
+            pickup_location: $('#pickup_location').val()
+        };
+        $.post(myTeamPlugin.ajax_url, data, function(response) {
+            if (response.success) {
+                $('#role-confirmation-modal').hide();
+                updateRoleButton(data.post_id, data.role_id, data.role_status, data.role_substitute, data.pickup_location);
+            } else {
+                console.error('Error saving role confirmation:', response.error);
+            }
+        }).fail(function(xhr, status, error) {
+            console.error('AJAX error:', status, error);
+            console.error('AJAX response:', xhr.responseText);
         });
     });
 

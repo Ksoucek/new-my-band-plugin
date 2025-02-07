@@ -1,6 +1,10 @@
 jQuery(document).ready(function($) {
     console.log('role-selection.js file loaded');
 
+    // Log the kseft_id to the console
+    var kseftId = $('#kseft_id').val();
+    console.log('kseft_id:', kseftId);
+
     function showRoleSelectionModal() {
         $('#role-selection-modal').show();
     }
@@ -28,24 +32,36 @@ jQuery(document).ready(function($) {
         };
     }
 
-    function updateRoleButton(kseftId, roleId, roleStatus, defaultPlayer, roleSubstitute, pickupLocation, transport) {
+    function updateRoleButton(kseftId, roleId, roleStatus, roleSubstitute, pickupLocation) {
         var button = $(`.role-confirmation[data-kseft-id="${kseftId}"][data-role-id="${roleId}"]`);
         button.removeClass('role-confirmation-nepotvrzeno role-confirmation-jdu role-confirmation-zaskok');
-        var confirmationText = roleStatus;
         if (roleStatus === 'Jdu') {
             button.addClass('role-confirmation-jdu');
-            confirmationText = defaultPlayer;
+            button.text('Jdu');
         } else if (roleStatus === 'Záskok') {
             button.addClass('role-confirmation-zaskok');
-            confirmationText = 'Záskok: ' + roleSubstitute;
+            button.text('Záskok: ' + roleSubstitute);
         } else {
             button.addClass('role-confirmation-nepotvrzeno');
+            button.text('Nepotvrzeno');
         }
-        button.text(roleStatus);
-        $('#role_status').val(roleStatus);
-        button.closest('tr').find('td:nth-child(2)').text(confirmationText);
-        button.closest('tr').find('td:nth-child(3)').text(pickupLocation);
-        button.closest('tr').find('td:nth-child(4)').find('select').val(transport);
+        button.closest('tr').find('.pickup-location').text(pickupLocation);
+    }
+
+    function loadRoleConfirmations(kseftId) {
+        $('.role-confirmation').each(function() {
+            var roleId = $(this).data('role-id');
+            $.post(myTeamPlugin.ajax_url, {
+                action: 'get_role_confirmation',
+                kseft_id: kseftId,
+                role_id: roleId
+            }, function(response) {
+                if (response.success) {
+                    var data = response.data;
+                    updateRoleButton(kseftId, roleId, data.role_status, data.role_substitute, data.pickup_location);
+                }
+            });
+        });
     }
 
     function updateKseftStatus(kseftId) {
@@ -150,7 +166,7 @@ jQuery(document).ready(function($) {
         }, function(response) {
             if (response.success) {
                 const roleDetails = response.data;
-                $('#kseft_id').val(kseftId);
+                $('#kseft_id').val(kseftId); // Ensure kseft_id is set correctly
                 $('#role_id').val(confirmingRoleId);
                 $('#role_status').val('Nepotvrzeno');
                 $('#role_substitute').val('');
@@ -191,29 +207,22 @@ jQuery(document).ready(function($) {
 
     $('#role-confirmation-form').on('submit', function(e) {
         e.preventDefault();
-        var roleStatus = $('#role_status').val();
-        var pickupLocation = $('#pickup_location').val();
-        var confirmingRoleId = $('#role_id').val();
-
-        if ((roleStatus === 'Jdu' || roleStatus === 'Záskok') && !pickupLocation) {
-            alert('Prosím vyplňte Místo vyzvednutí.');
-            return;
-        }
         var data = {
             action: 'save_role_confirmation',
-            post_id: $('#kseft_id').val(),
-            role_id: confirmingRoleId,
-            role_status: roleStatus,
+            kseft_id: $('#kseft_id').val(), // Use the correct selector
+            role_id: $('#role_id').val(),
+            role_status: $('#role_status').val(),
             role_substitute: $('#role_substitute').val(),
-            pickup_location: pickupLocation,
-            default_player: $('#default_player').val()
+            pickup_location: $('#pickup_location').val()
         };
+        console.log(`Saving role confirmation: kseft_id=${data.kseft_id}, role_id=${data.role_id}, role_status=${data.role_status}, role_substitute=${data.role_substitute}, pickup_location=${data.pickup_location}`);
         $.post(myTeamPlugin.ajax_url, data, function(response) {
             if (response.success) {
+                console.log(`jsRole confirmation saved: kseft_id=${data.kseft_id}, role_id=${data.role_id}, role_status=${data.role_status}`);
                 $('#role-confirmation-modal').hide();
-                updateRoleButton(data.post_id, data.role_id, data.role_status, data.default_player, data.role_substitute, data.pickup_location);
-                updateKseftStatus(data.post_id);
-                updateConfirmButton(data.post_id, data.role_id);
+                updateRoleButton(data.kseft_id, data.role_id, data.role_status, data.role_substitute, data.pickup_location);
+                updateKseftStatus(data.kseft_id);
+                updateConfirmButton(data.kseft_id, data.role_id);
             } else {
                 console.error('Error saving role confirmation:', response.error);
             }
@@ -280,4 +289,8 @@ jQuery(document).ready(function($) {
             $(this).data('role-text', currentRole.roleText); // Přidání textu role
         }
     });
+
+    if (kseftId) {
+        loadRoleConfirmations(kseftId);
+    }
 });

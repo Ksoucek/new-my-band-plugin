@@ -584,17 +584,34 @@ function my_team_plugin_save_role_confirmation() {
     $role_status = sanitize_text_field($_POST['role_status']);
     $role_substitute = sanitize_text_field($_POST['role_substitute']);
     $pickup_location = sanitize_text_field($_POST['pickup_location']);
-    $default_player = sanitize_text_field($_POST['default_player']);
 
     update_post_meta($post_id, 'role_status_' . $role_id, $role_status);
     update_post_meta($post_id, 'role_substitute_' . $role_id, $role_substitute);
     update_post_meta($post_id, 'pickup_location_' . $role_id, $pickup_location);
-    update_post_meta($post_id, 'default_player_' . $role_id, $default_player);
+
+    error_log("php Role confirmation saved: kseft_id=$post_id, role_id=$role_id, role_status=$role_status, role_substitute=$role_substitute, pickup_location=$pickup_location");
 
     wp_send_json_success('Účast byla potvrzena.');
 }
 add_action('wp_ajax_save_role_confirmation', 'my_team_plugin_save_role_confirmation');
 add_action('wp_ajax_nopriv_save_role_confirmation', 'my_team_plugin_save_role_confirmation');
+
+function my_team_plugin_get_role_confirmation() {
+    $post_id = intval($_POST['post_id']);
+    $role_id = intval($_POST['role_id']);
+
+    $role_status = get_post_meta($post_id, 'role_status_' . $role_id, true);
+    $role_substitute = get_post_meta($post_id, 'role_substitute_' . $role_id, true);
+    $pickup_location = get_post_meta($post_id, 'pickup_location_' . $role_id, true);
+
+    wp_send_json_success(array(
+        'role_status' => $role_status,
+        'role_substitute' => $role_substitute,
+        'pickup_location' => $pickup_location
+    ));
+}
+add_action('wp_ajax_get_role_confirmation', 'my_team_plugin_get_role_confirmation');
+add_action('wp_ajax_nopriv_get_role_confirmation', 'my_team_plugin_get_role_confirmation');
 
 function my_team_plugin_save_role_transport() {
     $post_id = intval($_POST['post_id']);

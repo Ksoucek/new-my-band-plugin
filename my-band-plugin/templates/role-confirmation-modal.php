@@ -3,6 +3,7 @@
         <h3>Potvrdit účast</h3>
         <form id="role-confirmation-form">
             <input type="hidden" name="kseft_id" id="kseft_id" value="">
+            <input type="hidden" name="role_id" id="role_id" value="">
             <label for="role_id">Vyberte roli:</label>
             <select name="role_id" id="role_id">
                 <option value="">-- Vyberte roli --</option>

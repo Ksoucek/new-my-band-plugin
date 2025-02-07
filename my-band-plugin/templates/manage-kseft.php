@@ -36,6 +36,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         update_post_meta($kseft_id, 'kseft_clothing', $kseft_clothing); // Uložení pole pro oblečení
         update_post_meta($kseft_id, 'kseft_description', $kseft_description); // Uložení pole pro popis
 
+        $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
+        foreach ($roles as $role) {
+            $role_id = $role->ID;
+            update_post_meta($kseft_id, 'role_status_' . $role_id, sanitize_text_field($_POST['role_status_' . $role_id]));
+            update_post_meta($kseft_id, 'role_substitute_' . $role_id, sanitize_text_field($_POST['role_substitute_' . $role_id]));
+            update_post_meta($kseft_id, 'pickup_location_' . $role_id, sanitize_text_field($_POST['pickup_location_' . $role_id]));
+        }
+
         // Aktualizace Google Kalendáře přes AJAX
         $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true);
         if ($google_event_id) {
@@ -102,6 +110,14 @@ $kseft_status = $kseft ? get_post_meta($kseft_id, 'kseft_status', true) : ''; //
 $kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : ''; // Načtení pole pro oblečení
 $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true); // Přidání proměnné $google_event_id
 $kseft_description = $kseft ? get_post_meta($kseft_id, 'kseft_description', true) : ''; // Načtení pole pro popis
+
+$roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
+foreach ($roles as $role) {
+    $role_id = $role->ID;
+    $role_status = get_post_meta($kseft_id, 'role_status_' . $role_id, true);
+    $role_substitute = get_post_meta($kseft_id, 'role_substitute_' . $role_id, true);
+    $pickup_location = get_post_meta($kseft_id, 'pickup_location_' . $role_id, true);
+}
 
 if (!$kseft_id) {
     $google_event_id = ''; // Nastavení prázdného ID pro nové kšefty
