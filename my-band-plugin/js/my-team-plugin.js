@@ -268,22 +268,6 @@ jQuery(document).ready(function($) {
             $('#kseft-overview-table tbody tr').show();
         }
     });
-
-    $('#role_select').on('change', function() {
-        var selectedRoleId = $(this).val();
-        if (selectedRoleId) {
-            $('#kseft-overview-table tbody tr').each(function() {
-                var roleIds = $(this).data('role-ids');
-                if (roleIds && roleIds.includes(parseInt(selectedRoleId))) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        } else {
-            $('#kseft-overview-table tbody tr').show();
-        }
-    });
      function updateConfirmButton(kseftId, roleId) {
         $.post(myTeamPlugin.ajax_url, {
             action: 'get_role_status',
@@ -316,39 +300,6 @@ jQuery(document).ready(function($) {
         });
     }
 
-    // Přidání funkce pro potvrzení účasti za zvolenou roli
-    $('.confirm-role-button, .role-confirmation').on('click', function() {
-        const kseftId = $(this).data('kseft-id');
-        const currentRole = {
-            roleId: window.sessionStorage.getItem('selectedRoleId'),
-            roleText: window.sessionStorage.getItem('selectedRoleText')
-        };
-        if (!currentRole.roleId) {
-            alert('Prosím vyberte roli.');
-            return;
-        }
-
-        $.post(myTeamPlugin.ajax_url, {
-            action: 'get_role_details',
-            role_id: currentRole.roleId
-        }, function(response) {
-            if (response.success) {
-                const roleDetails = response.data;
-                $('#kseft_id').val(kseftId);
-                $('#role_id').val(currentRole.roleId);
-                $('#role_status').val('Nepotvrzeno');
-                $('#role_substitute').val('');
-                $('#pickup_location').val(roleDetails.default_pickup_location);
-                $('#default_player').val(roleDetails.default_player);
-                $('#substitute-field').hide();
-                $('#pickup-location-field').hide();
-                $('#default-player-field').hide();
-                $('#role-confirmation-modal').show();
-            } else {
-                console.error('Error fetching role details:', response.error);
-            }
-        });
-    });
 
     // Aktualizace tlačítek na přehledu "moje-ksefty"
     $('#kseft-overview-table tbody tr').each(function() {

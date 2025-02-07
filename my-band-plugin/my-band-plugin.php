@@ -591,8 +591,7 @@ function my_team_plugin_save_role_confirmation() {
     update_post_meta($post_id, 'pickup_location_' . $role_id, $pickup_location);
     update_post_meta($post_id, 'default_player_' . $role_id, $default_player);
 
-    echo 'Účast byla potvrzena.';
-    wp_die();
+    wp_send_json_success('Účast byla potvrzena.');
 }
 add_action('wp_ajax_save_role_confirmation', 'my_team_plugin_save_role_confirmation');
 add_action('wp_ajax_nopriv_save_role_confirmation', 'my_team_plugin_save_role_confirmation');

@@ -28,8 +28,8 @@ jQuery(document).ready(function($) {
         };
     }
 
-    function updateRoleButton(roleId, roleStatus, defaultPlayer, roleSubstitute, pickupLocation, transport) {
-        var button = $('.role-confirmation[data-role-id="' + roleId + '"]');
+    function updateRoleButton(kseftId, roleId, roleStatus, defaultPlayer, roleSubstitute, pickupLocation, transport) {
+        var button = $(`.role-confirmation[data-kseft-id="${kseftId}"][data-role-id="${roleId}"]`);
         button.removeClass('role-confirmation-nepotvrzeno role-confirmation-jdu role-confirmation-zaskok');
         var confirmationText = roleStatus;
         if (roleStatus === 'Jdu') {
@@ -48,10 +48,10 @@ jQuery(document).ready(function($) {
         button.closest('tr').find('td:nth-child(4)').find('select').val(transport);
     }
 
-    function updateKseftStatus() {
+    function updateKseftStatus(kseftId) {
         var allConfirmed = true;
         var hasSubstitute = false;
-        $('.role-confirmation').each(function() {
+        $(`.role-confirmation[data-kseft-id="${kseftId}"]`).each(function() {
             var roleStatus = $(this).hasClass('role-confirmation-jdu') ? 'Jdu' : ($(this).hasClass('role-confirmation-zaskok') ? 'Záskok' : 'Nepotvrzeno');
             if (roleStatus === 'Záskok') {
                 hasSubstitute = true;
@@ -60,7 +60,7 @@ jQuery(document).ready(function($) {
                 allConfirmed = false;
             }
         });
-        var kseftButton = $('.kseft-status-button');
+        var kseftButton = $(`.kseft-status-button[data-kseft-id="${kseftId}"]`);
         if (allConfirmed) {
             kseftButton.removeClass('neobsazeno').addClass('obsazeno');
             kseftButton.text(hasSubstitute ? 'Obsazeno se záskokem' : 'Obsazeno');
@@ -99,7 +99,7 @@ jQuery(document).ready(function($) {
         }, function(response) {
             if (response.success) {
                 var roleStatus = response.data.role_status;
-                var button = $('.confirm-role-button[data-kseft-id="' + kseftId + '"]');
+                var button = $(`.confirm-role-button[data-kseft-id="${kseftId}"][data-role-id="${roleId}"]`);
                 button.removeClass('role-confirmation-nepotvrzeno role-confirmation-jdu role-confirmation-zaskok');
                 if (roleStatus === 'Jdu') {
                     button.addClass('role-confirmation-jdu');
@@ -130,19 +130,28 @@ jQuery(document).ready(function($) {
             roleId: getCurrentRole().roleId,
             roleText: getCurrentRole().roleText
         };
-        if (!currentRole.roleId) {
-            alert('Prosím vyberte roli.');
-            return;
+
+        const confirmingRoleId = $(this).data('role-id'); // Oprava pro získání role z konkrétního řádku
+        const confirmingRoleText = $(this).closest('tr').find('td:first').text(); // Oprava pro získání textu role
+
+        // Výpis do konzole
+        console.log('currentRole.roleId:', currentRole.roleId);
+        console.log('confirmingRoleId:', confirmingRoleId);
+
+        if (currentRole.roleId != confirmingRoleId) {
+            if (!confirm(`Potvrzujete účast za roli "${confirmingRoleText}", ale jste zalogovaný za roli "${currentRole.roleText}". Chcete pokračovat?`)) {
+                return;
+            }
         }
 
         $.post(myTeamPlugin.ajax_url, {
             action: 'get_role_details',
-            role_id: currentRole.roleId
+            role_id: confirmingRoleId
         }, function(response) {
             if (response.success) {
                 const roleDetails = response.data;
                 $('#kseft_id').val(kseftId);
-                $('#role_id').val(currentRole.roleId);
+                $('#role_id').val(confirmingRoleId);
                 $('#role_status').val('Nepotvrzeno');
                 $('#role_substitute').val('');
                 $('#pickup_location').val(roleDetails.default_pickup_location);
@@ -184,6 +193,8 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         var roleStatus = $('#role_status').val();
         var pickupLocation = $('#pickup_location').val();
+        var confirmingRoleId = $('#role_id').val();
+
         if ((roleStatus === 'Jdu' || roleStatus === 'Záskok') && !pickupLocation) {
             alert('Prosím vyplňte Místo vyzvednutí.');
             return;
@@ -191,60 +202,26 @@ jQuery(document).ready(function($) {
         var data = {
             action: 'save_role_confirmation',
             post_id: $('#kseft_id').val(),
-            role_id: $('#role_id').val(),
+            role_id: confirmingRoleId,
             role_status: roleStatus,
             role_substitute: $('#role_substitute').val(),
             pickup_location: pickupLocation,
             default_player: $('#default_player').val()
         };
         $.post(myTeamPlugin.ajax_url, data, function(response) {
-            $('#role-confirmation-modal').hide();
-            updateRoleButton(data.role_id, data.role_status, data.default_player, data.role_substitute, data.pickup_location);
-            updateKseftStatus();
-            updateConfirmButton(data.post_id, data.role_id);
+            if (response.success) {
+                $('#role-confirmation-modal').hide();
+                updateRoleButton(data.post_id, data.role_id, data.role_status, data.default_player, data.role_substitute, data.pickup_location);
+                updateKseftStatus(data.post_id);
+                updateConfirmButton(data.post_id, data.role_id);
+            } else {
+                console.error('Error saving role confirmation:', response.error);
+            }
+        }).fail(function(xhr, status, error) {
+            console.error('AJAX error:', status, error);
+            console.error('AJAX response:', xhr.responseText);
         });
     });
-    function updateRoleButton(roleId, roleStatus, defaultPlayer, roleSubstitute, pickupLocation, transport) {
-        var button = $('.role-confirmation[data-role-id="' + roleId + '"]');
-        button.removeClass('role-confirmation-nepotvrzeno role-confirmation-jdu role-confirmation-zaskok');
-        var confirmationText = roleStatus;
-        if (roleStatus === 'Jdu') {
-            button.addClass('role-confirmation-jdu');
-            confirmationText = defaultPlayer;
-        } else if (roleStatus === 'Záskok') {
-            button.addClass('role-confirmation-zaskok');
-            confirmationText = 'Záskok: ' + roleSubstitute;
-        } else {
-            button.addClass('role-confirmation-nepotvrzeno');
-        }
-        button.text(roleStatus);
-        $('#role_status').val(roleStatus);
-        button.closest('tr').find('td:nth-child(2)').text(confirmationText);
-        button.closest('tr').find('td:nth-child(3)').text(pickupLocation);
-        button.closest('tr').find('td:nth-child(4)').find('select').val(transport);
-    }
-
-    function updateKseftStatus() {
-        var allConfirmed = true;
-        var hasSubstitute = false;
-        $('.role-confirmation').each(function() {
-            var roleStatus = $(this).hasClass('role-confirmation-jdu') ? 'Jdu' : ($(this).hasClass('role-confirmation-zaskok') ? 'Záskok' : 'Nepotvrzeno');
-            if (roleStatus === 'Záskok') {
-                hasSubstitute = true;
-            }
-            if (roleStatus !== 'Jdu' && roleStatus !== 'Záskok') {
-                allConfirmed = false;
-            }
-        });
-        var kseftButton = $('.kseft-status-button');
-        if (allConfirmed) {
-            kseftButton.removeClass('neobsazeno').addClass('obsazeno');
-            kseftButton.text(hasSubstitute ? 'Obsazeno se záskokem' : 'Obsazeno');
-        } else {
-            kseftButton.removeClass('obsazeno').addClass('neobsazeno');
-            kseftButton.text('Neobsazeno');
-        }
-    }
 
     $('#role-selection-form').on('submit', function(e) {
         e.preventDefault();
@@ -254,7 +231,7 @@ jQuery(document).ready(function($) {
             setCurrentRole(selectedRoleId, selectedRoleText);
             hideRoleSelectionModal();
         } else {
-            alert('Prosím vyberte roli.');
+            alert('Prosím vyberte roli. ROLE CONFIRMATION');
         }
     });
 
@@ -285,29 +262,22 @@ jQuery(document).ready(function($) {
         }
     });
 
-    $('#role_select').on('change', function() {
-        var selectedRoleId = $(this).val();
-        if (selectedRoleId) {
-            $('#kseft-overview-table tbody tr').each(function() {
-                var roleIds = $(this).data('role-ids');
-                if (roleIds && roleIds.includes(parseInt(selectedRoleId))) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        } else {
-            $('#kseft-overview-table tbody tr').show();
-        }
-    });
-
     // Aktualizace tlačítek na přehledu "moje-ksefty"
     $('#kseft-overview-table tbody tr').each(function() {
         var kseftId = $(this).data('kseft-id');
         var roleIds = $(this).data('role-ids');
-        var currentRoleId = sessionStorage.getItem('selectedRoleId');
+        var currentRoleId = window.sessionStorage.getItem('selectedRoleId');
         if (roleIds && roleIds.includes(parseInt(currentRoleId))) {
             updateConfirmButton(kseftId, currentRoleId);
+        }
+    });
+
+    // Předvyplnění hodnoty v roli na přehledu "moje kšefty"
+    $('.confirm-role-button').each(function() {
+        const currentRole = getCurrentRole();
+        if (currentRole.roleId) {
+            $(this).data('role-id', currentRole.roleId);
+            $(this).data('role-text', currentRole.roleText); // Přidání textu role
         }
     });
 });
