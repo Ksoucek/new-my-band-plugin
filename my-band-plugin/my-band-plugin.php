@@ -40,8 +40,12 @@ function my_team_plugin_create_kseft() {
         'post_type' => 'kseft',
         'post_status' => 'publish'
     ));
-    echo $kseft_id;
-    wp_die();
+
+    if (is_wp_error($kseft_id)) {
+        wp_send_json_error(array('message' => 'Chyba při vytváření kšeftu.'));
+    } else {
+        wp_send_json_success(array('kseft_id' => $kseft_id));
+    }
 }
 add_action('wp_ajax_my_team_plugin_create_kseft', 'my_team_plugin_create_kseft');
 add_action('wp_ajax_nopriv_my_team_plugin_create_kseft', 'my_team_plugin_create_kseft');
@@ -974,6 +978,15 @@ function my_team_plugin_delete_kseft($post_id) {
     }
 }
 add_action('before_delete_post', 'my_team_plugin_delete_kseft');
+
+// Přidání přesměrování po smazání kšeftu
+function my_team_plugin_redirect_after_delete() {
+    if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['post']) && get_post_type($_GET['post']) === 'kseft') {
+        wp_redirect(site_url('/ksefty'));
+        exit;
+    }
+}
+add_action('admin_init', 'my_team_plugin_redirect_after_delete');
 
 function my_team_plugin_add_kseft_overview_page() {
     add_menu_page(

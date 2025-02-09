@@ -71,7 +71,7 @@ jQuery(document).ready(function($) {
 
     function addToCalendarButtonHandler() {
         console.log('Add to Calendar button clicked');
-        var postId = myTeamPlugin.post_id;
+        var postId = myTeamPlugin.post_id; // Oprava pro získání správného post_id
 
         if (!postId) {
             console.error('Missing post_id');
@@ -89,10 +89,12 @@ jQuery(document).ready(function($) {
                 var kseftName = response.data.kseft_name;
                 var kseftLocation = response.data.kseft_location;
                 var kseft_duration = response.data.kseft_duration || 2; // Předpokládaná délka v hodinách, výchozí hodnota je 2 hodiny
+                var kseftDescription = response.data.kseft_description; // Přidání popisu
 
                 var eventDetails = {
                     summary: kseftName,
                     location: kseftLocation,
+                    description: kseftDescription, // Přidání popisu do detailů události
                     start: {},
                     end: {}
                 };
@@ -134,6 +136,7 @@ jQuery(document).ready(function($) {
         var kseftEventDate = $('input[name="kseft_event_date"]').val();
         var kseftDuration = $('input[name="kseft_duration"]').val();
         var kseftStatus = $('select[name="kseft_status"]').val();
+        var kseftDescription = $('textarea[name="kseft_description"]').val(); // Přidání popisu
 
         if (!kseftId) {
             console.error('Missing kseft_id');
@@ -151,7 +154,7 @@ jQuery(document).ready(function($) {
         var eventDetails = {
             summary: kseftName,
             location: kseftLocation,
-            description: kseftStatus,
+            description: kseftDescription, // Přidání popisu do detailů události
             start: startTime,
             end: endTime
         };
