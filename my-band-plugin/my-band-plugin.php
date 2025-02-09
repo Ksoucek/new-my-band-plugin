@@ -599,7 +599,7 @@ add_action('wp_ajax_save_role_confirmation', 'my_team_plugin_save_role_confirmat
 add_action('wp_ajax_nopriv_save_role_confirmation', 'my_team_plugin_save_role_confirmation');
 
 function my_team_plugin_get_role_confirmation() {
-    $post_id = intval($_POST['post_id']);
+    $post_id = intval($_POST['kseft_id']);
     $role_id = intval($_POST['role_id']);
 
     $role_status = get_post_meta($post_id, 'role_status_' . $role_id, true);
@@ -1116,4 +1116,10 @@ function my_team_plugin_get_role_status() {
 }
 add_action('wp_ajax_get_role_status', 'my_team_plugin_get_role_status');
 add_action('wp_ajax_nopriv_get_role_status', 'my_team_plugin_get_role_status');
+
+function my_team_plugin_log_error($message) {
+    $log_file = plugin_dir_path(__FILE__) . '../custom_error_log.log';
+    $timestamp = date('Y-m-d H:i:s');
+    error_log("[$timestamp] $message\n", 3, $log_file);
+}
 ?>
