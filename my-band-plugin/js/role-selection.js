@@ -139,9 +139,18 @@ jQuery(document).ready(function($) {
     // Přidání funkce pro potvrzení účasti za zvolenou roli
     $('.confirm-role-button, .role-confirmation').on('click', function() {
         const kseftId = $(this).data('kseft-id');
-        const currentRole = getCurrentRole(); // Získání aktuální zvolené role
-        const confirmingRoleId = currentRole.roleId; // Použití aktuální zvolené role
-        const confirmingRoleText = currentRole.roleText; // Použití textu aktuální zvolené role
+        let confirmingRoleId;
+        let confirmingRoleText;
+
+        // Rozlišení, zda potvrzujete z přehledu nebo z karty kšeftu
+        if ($(this).hasClass('confirm-role-button')) {
+            const currentRole = getCurrentRole(); // Získání aktuální zvolené role
+            confirmingRoleId = currentRole.roleId; // Použití aktuální zvolené role
+            confirmingRoleText = currentRole.roleText; // Použití textu aktuální zvolené role
+        } else {
+            confirmingRoleId = $(this).data('role-id'); // Získání role z karty kšeftu
+            confirmingRoleText = $(this).closest('tr').find('td:nth-child(2)').text(); // Získání textu role z karty kšeftu
+        }
 
         // Výpis do konzole
         console.log('confirmingRoleId:', confirmingRoleId);
