@@ -420,7 +420,8 @@ function my_team_plugin_display_kseft_details($content) {
         } else {
             $custom_content .= '<span style="flex: 1;"></span>';
         }
-        $back_link = isset($_GET['from']) && $_GET['from'] === 'moje-ksefty' ? site_url('/moje-ksefty') : site_url('/ksefty');
+        $current_role_id = isset($_COOKIE['selectedRoleId']) ? intval($_COOKIE['selectedRoleId']) : 0;
+        $back_link = $current_role_id ? site_url('/moje-ksefty') : site_url('/ksefty');
         $custom_content .= '<a href="' . $back_link . '" class="button" style="flex: 1; text-align: center;">Zpět na přehled kšeftů</a>';
         if ($next_kseft) {
             $custom_content .= '<a href="' . get_permalink($next_kseft->ID) . '" class="button" style="flex: 1; text-align: right;">Další kšeft</a>';

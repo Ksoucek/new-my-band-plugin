@@ -154,7 +154,8 @@ jQuery(document).ready(function($) {
         console.log('currentRole.roleId:', currentRole.roleId);
         console.log('confirmingRoleId:', confirmingRoleId);
 
-        if (currentRole.roleId != confirmingRoleId) {
+        // Upravená podmínka pro zobrazení hlášky
+        if (currentRole.roleId && currentRole.roleId !== 'undefined' && currentRole.roleId != confirmingRoleId) {
             if (!confirm(`Potvrzujete účast za roli "${confirmingRoleText}", ale jste zalogovaný za roli "${currentRole.roleText}". Chcete pokračovat?`)) {
                 return;
             }
