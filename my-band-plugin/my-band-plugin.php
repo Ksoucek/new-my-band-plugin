@@ -488,7 +488,7 @@ function my_team_plugin_display_kseft_details($content) {
                         }
                         $custom_content .= '</select>
                         </td>';
-                        $custom_content .= '<td><button class="button ' . esc_attr($button_class) . '" data-role-id="' . esc_attr($role_id) . '" data-default-player="' . esc_attr($default_player) . '" data-pickup-location="' . esc_attr($pickup_location) . '" data-default-pickup-location="' . esc_attr($default_pickup_location) . '">' . esc_html($button_text) . '</button></td>';
+                        $custom_content .= '<td><button class="button ' . esc_attr($button_class) . '" data-role-id="' . esc_attr($role_id) . '" data-kseft-id="' . esc_attr($kseft_id) . '" data-default-player="' . esc_attr($default_player) . '" data-pickup-location="' . esc_attr($pickup_location) . '" data-default-pickup-location="' . esc_attr($default_pickup_location) . '">' . esc_html($button_text) . '</button></td>';
                         $custom_content .= '</tr>';
                     }
                 }
@@ -502,6 +502,7 @@ function my_team_plugin_display_kseft_details($content) {
             <div class="modal-content">
                 <h3>Potvrdit účast</h3>
                 <form id="role-confirmation-form">
+                    <input type="hidden" name="kseft_id" id="kseft_id" value="">
                     <input type="hidden" name="role_id" id="role_id" value="">
                     <label for="role_status">Stav účasti:</label>
                     <select name="role_status" id="role_status">
@@ -579,7 +580,7 @@ function my_team_plugin_get_adjacent_kseft($current_date, $direction = 'next') {
 }
 
 function my_team_plugin_save_role_confirmation() {
-    $post_id = intval($_POST['post_id']);
+    $post_id = intval($_POST['kseft_id']);
     $role_id = intval($_POST['role_id']);
     $role_status = sanitize_text_field($_POST['role_status']);
     $role_substitute = sanitize_text_field($_POST['role_substitute']);
