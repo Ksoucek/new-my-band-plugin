@@ -131,6 +131,7 @@ if (!$kseft_id) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $kseft_id ? 'Upravit Kšeft' : 'Vytvořit Kšeft'; ?></title>
     <?php wp_head(); ?>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -213,7 +214,7 @@ if (!$kseft_id) {
     <div class="container">
         <h1><?php echo $kseft_id ? 'Upravit Kšeft' : 'Vytvořit Kšeft'; ?></h1>
         <form method="POST" id="manage-kseft-form">
-            <input type="hidden" name="kseft_id" value="<?php echo esc_attr($kseft_id); ?>">
+            <input type="hidden" name="kseft_id" id="kseft_id" value="<?php echo esc_attr($kseft_id); ?>">
             <input type="hidden" name="google_calendar_event_id" value="<?php echo esc_attr($google_event_id); ?>">
             <div class="form-group-inline">
                 <div class="form-group">
@@ -391,7 +392,7 @@ if (!$kseft_id) {
             });
 
             $('#add-to-calendar-button').on('click', function() {
-                var kseftId = $('input[name="kseft_id"]').val();
+                var kseftId = $('#kseft_id').val();
                 var kseftName = $('input[name="kseft_name"]').val();
                 var kseftLocation = $('input[name="kseft_location"]').val();
                 var kseftMeetingTime = $('input[name="kseft_meeting_time"]').val();

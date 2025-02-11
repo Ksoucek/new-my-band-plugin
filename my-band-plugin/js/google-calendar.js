@@ -1,11 +1,11 @@
 jQuery(document).ready(function($) {
     console.log('google-calendar.js file loaded');
 
-    function handleGoogleCalendarEvent(postId, eventDetails, googleEventId) {
-        console.log('handleGoogleCalendarEvent called with:', postId, eventDetails, googleEventId);
-        if (!postId) {
-            console.error('Missing post_id');
-            alert('Chyba: post_id není k dispozici.');
+    function handleGoogleCalendarEvent(kseftId, eventDetails, googleEventId) {
+        console.log('handleGoogleCalendarEvent called with:', kseftId, eventDetails, googleEventId);
+        if (!kseftId) {
+            console.error('Missing kseft_id');
+            alert('Chyba: kseft_id není k dispozici.');
             return;
         }
 
@@ -16,7 +16,7 @@ jQuery(document).ready(function($) {
 
         var data = {
             action: action,
-            post_id: postId,
+            kseft_id: kseftId,
             event_details: eventDetails
         };
 
@@ -43,7 +43,7 @@ jQuery(document).ready(function($) {
                         // Uložení Google Calendar event ID ke kartě kšeftu
                         $.post(myTeamPlugin.ajax_url, {
                             action: 'save_google_event_id',
-                            post_id: postId,
+                            kseft_id: kseftId,
                             google_event_id: response.event_id
                         }).done(function(saveResponse) {
                             if (saveResponse.success) {
@@ -71,17 +71,17 @@ jQuery(document).ready(function($) {
 
     function addToCalendarButtonHandler() {
         console.log('Add to Calendar button clicked');
-        var postId = myTeamPlugin.post_id; // Oprava pro získání správného post_id
+        var kseftId = $('#kseft_id').val(); // Oprava pro získání správného kseft_id
 
-        if (!postId) {
-            console.error('Missing post_id');
-            alert('Chyba: post_id není k dispozici.');
+        if (!kseftId) {
+            console.error('Missing kseft_id');
+            alert('Chyba: kseft_id není k dispozici.');
             return;
         }
 
         $.post(myTeamPlugin.ajax_url, {
             action: 'get_event_details',
-            post_id: postId
+            kseft_id: kseftId
         }, function(response) {
             if (response.success) {
                 var eventDate = response.data.event_date;
@@ -117,7 +117,7 @@ jQuery(document).ready(function($) {
                 console.log('JS Event details:', eventDetails);
 
                 var googleEventId = response.data.google_event_id || null;
-                handleGoogleCalendarEvent(postId, eventDetails, googleEventId);
+                handleGoogleCalendarEvent(kseftId, eventDetails, googleEventId);
             } else {
                 console.error('Error fetching event details:', response.data);
                 alert('Chyba při získávání detailů události.');

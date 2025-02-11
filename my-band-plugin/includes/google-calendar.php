@@ -38,14 +38,14 @@ function generate_event_json($summary, $start_time, $end_time, $location) {
 
 function handle_add_to_calendar_request(WP_REST_Request $request) {
     $event_details = $request->get_param('event_details');
-    $post_id = $request->get_param('post_id'); // Přidání post_id
+    $kseft_id = $request->get_param('kseft_id'); // Přidání kseft_id
 
     if (!$event_details) {
         return new WP_REST_Response(['error' => 'Missing parameter: event_details'], 400);
     }
 
-    if (!$post_id) {
-        return new WP_REST_Response(['error' => 'Missing parameter: post_id'], 400);
+    if (!$kseft_id) {
+        return new WP_REST_Response(['error' => 'Missing parameter: kseft_id'], 400);
     }
 
     if (isset($event_details['start']['dateTime']) && isset($event_details['end']['dateTime'])) {
@@ -72,7 +72,7 @@ function handle_add_to_calendar_request(WP_REST_Request $request) {
     }
 
     // Uložení ID události Google Kalendáře do metadat příspěvku
-    update_post_meta($post_id, 'google_calendar_event_id', $result['event_id']);
+    update_post_meta($kseft_id, 'google_calendar_event_id', $result['event_id']);
 
     // Generování odkazu na Google Kalendářovou akci
     $event_link = generate_google_calendar_event_link($result['event_id']);
@@ -168,10 +168,10 @@ function handle_get_last_error_request() {
 
 // Přidání funkce pro uložení Google Calendar event ID ke kartě kšeftu
 function save_google_event_id() {
-    $post_id = intval($_POST['post_id']);
+    $kseft_id = intval($_POST['kseft_id']);
     $google_event_id = sanitize_text_field($_POST['google_event_id']);
 
-    if (update_post_meta($post_id, 'google_calendar_event_id', $google_event_id)) {
+    if (update_post_meta($kseft_id, 'google_calendar_event_id', $google_event_id)) {
         wp_send_json_success();
     } else {
         wp_send_json_error(['error' => 'Failed to save Google Calendar event ID.']);
