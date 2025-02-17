@@ -227,7 +227,8 @@ function my_team_plugin_display_ksefty() {
     );
     $ksefty = new WP_Query($args);
     error_log('Query executed: ' . print_r($args, true));
-    $output = '<div class="business-overview">';
+    $output = '<div class="business-overview" style="text-align: center;">'; // Přidání stylu pro vycentrování
+    $output .= '<a href="' . site_url('/moje-ksefty') . '" class="button">Moje kšefty</a>'; // Přidání tlačítka pro přechod na "moje kšefty"
     $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>'; // Přesunutí tlačítka nahoru
     if ($ksefty->have_posts()) {
         $output .= '<table>';
@@ -1015,6 +1016,9 @@ function my_team_plugin_kseft_overview_shortcode() {
     ?>
     <div id="selected-role-display" style="margin-bottom: 20px; font-weight: bold; cursor: pointer;"></div>
     <?php include plugin_dir_path(__FILE__) . 'templates/role-selection-modal.php'; ?>
+    <div style="text-align: center;"> <!-- Přidání stylu pro vycentrování -->
+        <a href="<?php echo site_url('/ksefty'); ?>" class="button">Všechny kšefty</a> <!-- Přidání tlačítka pro přechod na "kšefty" -->
+    </div>
     <table id="kseft-overview-table">
         <thead>
             <tr>
