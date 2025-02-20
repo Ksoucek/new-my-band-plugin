@@ -16,17 +16,18 @@ if (file_exists($autoload_path)) { // Kontrola, zda soubor existuje
 require_once plugin_dir_path(__FILE__) . 'includes/google-calendar.php'; // Načtení souboru pro Google Kalendář
 
 function my_team_plugin_enqueue_scripts() {
+    wp_enqueue_script('jquery'); // Načtení jQuery
     wp_enqueue_script('my-team-plugin-script', plugins_url('/js/my-team-plugin.js', __FILE__), array('jquery'), '1.0', true); // Načtení hlavního JS souboru
-    wp_enqueue_script('role-selection-script', plugins_url('/js/role-selection.js', __FILE__), array('jquery'), '1.0', true); // Načtení JS souboru pro výběr rolí
-    wp_enqueue_script('google-calendar-script', plugins_url('/js/google-calendar.js', __FILE__), array('jquery', 'my-team-plugin-script'), '1.0', true); // Načtení JS souboru pro Google Kalendář
     wp_localize_script('my-team-plugin-script', 'myTeamPlugin', array(
         'ajax_url' => admin_url('admin-ajax.php'), // URL pro AJAX požadavky
+        'nonce' => wp_create_nonce('wp_rest'), // Nonce pro zabezpečení
+        'site_url' => site_url(), // URL webu
         'post_id' => get_the_ID(), // ID aktuálního příspěvku
         'api_key' => get_option('my_team_plugin_openrouteservice_api_key'), // API klíč pro OpenRouteService
-        'rest_url' => rest_url('google-calendar/v1/add-to-calendar'), // REST URL pro přidání do kalendáře
-        'nonce' => wp_create_nonce('wp_rest'), // Nonce pro zabezpečení
-        'site_url' => site_url() // URL webu
+        'rest_url' => rest_url('google-calendar/v1/add-to-calendar') // REST URL pro přidání do kalendáře
      ));
+    wp_enqueue_script('role-selection-script', plugins_url('/js/role-selection.js', __FILE__), array('jquery'), '1.0', true); // Načtení JS souboru pro výběr rolí
+    wp_enqueue_script('google-calendar-script', plugins_url('/js/google-calendar.js', __FILE__), array('jquery', 'my-team-plugin-script'), '1.0', true); // Načtení JS souboru pro Google Kalendář
     wp_enqueue_script('google-maps', 'https://maps.googleapis.com/maps/api/js?key=' . get_option('my_team_plugin_google_maps_api_key') . '&libraries=places', null, null, true); // Načtení Google Maps API
     wp_enqueue_style('my-team-plugin-style', plugins_url('/css/my-team-plugin.css', __FILE__)); // Načtení hlavního CSS souboru
     wp_enqueue_style('my-team-plugin-responsive-style', plugins_url('/css/my-team-plugin-responsive.css', __FILE__)); // Načtení CSS souboru pro responzivní design
@@ -34,6 +35,7 @@ function my_team_plugin_enqueue_scripts() {
 add_action('wp_enqueue_scripts', 'my_team_plugin_enqueue_scripts'); // Přidání akce pro načtení skriptů a stylů
 
 function my_team_plugin_create_kseft() {
+    check_ajax_referer('wp_rest', 'nonce');
     $kseft_name = sanitize_text_field($_POST['kseft_name']); // Sanitizace názvu kšeftu
     $kseft_id = wp_insert_post(array(
         'post_title' => $kseft_name, // Název příspěvku
@@ -44,13 +46,15 @@ function my_team_plugin_create_kseft() {
     if (is_wp_error($kseft_id)) { // Kontrola, zda došlo k chybě
         wp_send_json_error(array('message' => 'Chyba při vytváření kšeftu.')); // Odeslání chybové zprávy
     } else {
-        wp_send_json_success(array('kseft_id' => $kseft_id)); // Odeslání úspěšné zprávy s ID kšeftu
+        wp_send_json_success(array('kseft_id' => $kseft_id, 'redirect_url' => get_permalink($kseft_id))); // Odeslání úspěšné zprávy s ID kšeftu a URL pro přesměrování
     }
+    wp_die();
 }
 add_action('wp_ajax_my_team_plugin_create_kseft', 'my_team_plugin_create_kseft'); // Přidání AJAX akce pro přihlášené uživatele
 add_action('wp_ajax_nopriv_my_team_plugin_create_kseft', 'my_team_plugin_create_kseft'); // Přidání AJAX akce pro nepřihlášené uživatele
 
 function my_team_plugin_add_member() {
+    check_ajax_referer('wp_rest', 'nonce');
     $kseft_id = intval($_POST['kseft_id']); // Získání ID kšeftu
     $member_name = sanitize_text_field($_POST['member_name']); // Sanitizace jména člena
     add_post_meta($kseft_id, 'kseft_member', $member_name); // Přidání člena jako meta data
@@ -61,6 +65,7 @@ add_action('wp_ajax_my_team_plugin_add_member', 'my_team_plugin_add_member'); //
 add_action('wp_ajax_nopriv_my_team_plugin_add_member', 'my_team_plugin_add_member'); // Přidání AJAX akce pro nepřihlášené uživatele
 
 function my_team_plugin_schedule_event() {
+    check_ajax_referer('wp_rest', 'nonce');
     $kseft_id = intval($_POST['kseft_id']); // Získání ID kšeftu
     $event_name = sanitize_text_field($_POST['event_name']); // Sanitizace názvu události
     $event_date = sanitize_text_field($_POST['event_date']); // Sanitizace data události
@@ -540,6 +545,7 @@ function my_team_plugin_display_kseft_details($content) {
 add_filter('the_content', 'my_team_plugin_display_kseft_details'); // Přidání filtru pro zobrazení detailů kšeftu
 
 function my_team_plugin_save_pickup_time() {
+    check_ajax_referer('wp_rest', 'nonce');
     $post_id = intval($_POST['post_id']); // Získání ID příspěvku
     $role_id = intval($_POST['role_id']); // Získání ID role
     $pickup_time = sanitize_text_field($_POST['pickup_time']); // Sanitizace času vyzvednutí
@@ -585,6 +591,7 @@ function my_team_plugin_get_adjacent_kseft($current_date, $direction = 'next') {
 }
 
 function my_team_plugin_save_role_confirmation() {
+    check_ajax_referer('wp_rest', 'nonce');
     $post_id = intval($_POST['kseft_id']); // Získání ID příspěvku
     $role_id = intval($_POST['role_id']); // Získání ID role
     $role_status = sanitize_text_field($_POST['role_status']); // Sanitizace stavu role
@@ -598,6 +605,7 @@ function my_team_plugin_save_role_confirmation() {
     error_log("php Role confirmation saved: kseft_id=$post_id, role_id=$role_id, role_status=$role_status, role_substitute=$role_substitute, pickup_location=$pickup_location"); // Logování uložení potvrzení role
 
     wp_send_json_success('Účast byla potvrzena.');
+    wp_die();
 }
 add_action('wp_ajax_save_role_confirmation', 'my_team_plugin_save_role_confirmation'); // Přidání AJAX akce pro přihlášené uživatele
 add_action('wp_ajax_nopriv_save_role_confirmation', 'my_team_plugin_save_role_confirmation'); // Přidání AJAX akce pro nepřihlášené uživatele
@@ -620,6 +628,7 @@ add_action('wp_ajax_get_role_confirmation', 'my_team_plugin_get_role_confirmatio
 add_action('wp_ajax_nopriv_get_role_confirmation', 'my_team_plugin_get_role_confirmation'); // Přidání AJAX akce pro nepřihlášené uživatele
 
 function my_team_plugin_save_role_transport() {
+    check_ajax_referer('wp_rest', 'nonce');
     $post_id = intval($_POST['post_id']); // Získání ID příspěvku
     $role_id = intval($_POST['role_id']); // Získání ID role
     $transport = sanitize_text_field($_POST['transport']); // Sanitizace dopravy
@@ -905,7 +914,7 @@ add_action('wp_ajax_test_openai_api', 'my_team_plugin_test_openai_api'); // Při
 add_action('wp_ajax_nopriv_test_openai_api', 'my_team_plugin_test_openai_api'); // Přidání AJAX akce pro nepřihlášené uživatele
 
 function my_team_plugin_get_event_details() {
-    $post_id = intval($_POST['post_id']); // Získání ID příspěvku
+    $post_id = intval($_POST['kseft_id']); // Získání ID příspěvku
     $kseft_duration = get_post_meta($post_id, 'kseft_duration', true); // Získání předpokládané délky
     $event_date = get_post_meta($post_id, 'kseft_event_date', true); // Získání data události
     $meeting_time = get_post_meta($post_id, 'kseft_meeting_time', true); // Získání času srazu

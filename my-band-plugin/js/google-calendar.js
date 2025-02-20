@@ -17,7 +17,8 @@ jQuery(document).ready(function($) {
         var data = {
             action: action, // Akce (přidání nebo aktualizace události)
             kseft_id: kseftId, // ID kšeftu
-            event_details: eventDetails // Detaily události
+            event_details: eventDetails, // Detaily události
+            nonce: myTeamPlugin.nonce
         };
 
         if (googleEventId) {
@@ -64,7 +65,7 @@ jQuery(document).ready(function($) {
             error: function(xhr, status, error) {
                 console.error('AJAX error:', error); // Logování chyby AJAX požadavku
                 console.error('Response:', xhr.responseText); // Logování odpovědi AJAX požadavku
-                alert('Chyba při komunikaci se serverem.'); // Zobrazení chybové zprávy
+                alert('Chyba při komunikaci se serverem GC.JS.'); // Zobrazení chybové zprávy
             }
         });
     }
@@ -122,6 +123,10 @@ jQuery(document).ready(function($) {
                 console.error('Error fetching event details:', response.data); // Logování chyby získání detailů události
                 alert('Chyba při získávání detailů události.'); // Zobrazení chybové zprávy
             }
+        }).fail(function(xhr, status, error) {
+            console.error('AJAX error:', status, error); // Logování chyby AJAX požadavku
+            console.error('Response:', xhr.responseText); // Logování odpovědi AJAX požadavku
+            alert('Chyba při komunikaci se serverem GC.JS.'); // Zobrazení chybové zprávy
         });
     }
 

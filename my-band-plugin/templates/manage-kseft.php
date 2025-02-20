@@ -112,11 +112,16 @@ $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true); /
 $kseft_description = $kseft ? get_post_meta($kseft_id, 'kseft_description', true) : ''; // Načtení pole pro popis
 
 $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
+$meta = get_post_meta($kseft_id);
 foreach ($roles as $role) {
     $role_id = $role->ID;
-    $role_status = get_post_meta($kseft_id, 'role_status_' . $role_id, true);
-    $role_substitute = get_post_meta($kseft_id, 'role_substitute_' . $role_id, true);
-    $pickup_location = get_post_meta($kseft_id, 'pickup_location_' . $role_id, true);
+    $role_status_key = 'role_status_' . $role_id;
+    $role_substitute_key = 'role_substitute_' . $role_id;
+    $pickup_location_key = 'pickup_location_' . $role_id;
+
+    $role_status = isset($meta[$role_status_key]) ? $meta[$role_status_key][0] : '';
+    $role_substitute = isset($meta[$role_substitute_key]) ? $meta[$role_substitute_key][0] : '';
+    $pickup_location = isset($meta[$pickup_location_key]) ? $meta[$pickup_location_key][0] : '';
 }
 
 if (!$kseft_id) {

@@ -27,6 +27,24 @@ jQuery(document).ready(function($) {
         });
     });
 
+    $('#create-kseft-button').click(function() {
+        var kseftName = $('#kseft-name').val();
+        $.post(myTeamPlugin.ajax_url, {
+            action: 'my_team_plugin_create_kseft',
+            kseft_name: kseftName,
+            nonce: myTeamPlugin.nonce
+        }, function(response) {
+            if (response.success) {
+                window.location.href = response.data.redirect_url; // Přesměrování na kartu kšeftu
+            } else {
+                alert(response.data.message); // Zobrazení chybové zprávy
+            }
+        }).fail(function(xhr, status, error) {
+            console.error('AJAX error:', status, error);
+            console.error('AJAX response:', xhr.responseText);
+        });
+    });
+
     $('.transport-select').on('change', function() {
         var roleId = $(this).data('role-id');
         var transport = $(this).val();
@@ -252,7 +270,8 @@ jQuery(document).ready(function($) {
             role_id: $('#role_id').val(),
             role_status: $('#role_status').val(),
             role_substitute: $('#role_substitute').val(),
-            pickup_location: $('#pickup_location').val()
+            pickup_location: $('#pickup_location').val(),
+            nonce: myTeamPlugin.nonce
         };
         $.post(myTeamPlugin.ajax_url, data, function(response) {
             if (response.success) {
