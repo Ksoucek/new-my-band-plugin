@@ -65,7 +65,7 @@ jQuery(document).ready(function($) {
             error: function(xhr, status, error) {
                 console.error('AJAX error:', error); // Logování chyby AJAX požadavku
                 console.error('Response:', xhr.responseText); // Logování odpovědi AJAX požadavku
-                alert('Chyba při komunikaci se serverem GC.JS.'); // Zobrazení chybové zprávy
+                alert('Akce nebyla upravena na google kalendáři update-GC.JS.'); // Zobrazení chybové zprávy
             }
         });
     }
@@ -126,7 +126,7 @@ jQuery(document).ready(function($) {
         }).fail(function(xhr, status, error) {
             console.error('AJAX error:', status, error); // Logování chyby AJAX požadavku
             console.error('Response:', xhr.responseText); // Logování odpovědi AJAX požadavku
-            alert('Chyba při komunikaci se serverem GC.JS.'); // Zobrazení chybové zprávy
+            alert('Chyba při komunikaci se serverem add - GC.JS.'); // Zobrazení chybové zprávy
         });
     }
 

@@ -39,9 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
         foreach ($roles as $role) {
             $role_id = $role->ID;
-            update_post_meta($kseft_id, 'role_status_' . $role_id, sanitize_text_field($_POST['role_status_' . $role_id]));
-            update_post_meta($kseft_id, 'role_substitute_' . $role_id, sanitize_text_field($_POST['role_substitute_' . $role_id]));
-            update_post_meta($kseft_id, 'pickup_location_' . $role_id, sanitize_text_field($_POST['pickup_location_' . $role_id]));
+            $role_status = isset($_POST['role_status_' . $role_id]) ? sanitize_text_field($_POST['role_status_' . $role_id]) : '';
+            $role_substitute = isset($_POST['role_substitute_' . $role_id]) ? sanitize_text_field($_POST['role_substitute_' . $role_id]) : '';
+            $pickup_location = isset($_POST['pickup_location_' . $role_id]) ? sanitize_text_field($_POST['pickup_location_' . $role_id]) : '';
+            update_post_meta($kseft_id, 'role_status_' . $role_id, $role_status);
+            update_post_meta($kseft_id, 'role_substitute_' . $role_id, $role_substitute);
+            update_post_meta($kseft_id, 'pickup_location_' . $role_id, $pickup_location);
         }
 
         // Aktualizace Google Kalendáře přes AJAX
