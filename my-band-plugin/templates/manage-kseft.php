@@ -66,7 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $.post(myTeamPlugin.ajax_url, {
                         action: 'update_google_calendar_event',
                         event_id: '<?php echo $google_event_id; ?>',
-                        event_details: eventDetails
+                        event_details: eventDetails,
+                        kseft_id: '<?php echo $kseft_id; ?>' // Přidání parametru kseft_id
                     }, function(response) {
                         if (response.success) {
                             console.log('Google Calendar event updated successfully.');
@@ -283,7 +284,7 @@ if (!$kseft_id) {
                 <label for="kseft_description">Popis <span title="Poznámky - např. doprava, instrukce atd.">(?)</span>:</label>
                 <textarea name="kseft_description" id="kseft_description" rows="4"><?php echo esc_textarea($kseft_description); ?></textarea>
             </div>
-            <div id="map-kseft"></div>
+            <div id="map" style="width: 100%; height: 400px;"></div> <!-- Přidání ID "map" -->
             <div class="form-actions">
                 <button type="submit" class="button" id="submit-kseft"><?php echo $kseft_id ? 'Upravit Kšeft' : 'Vytvořit Kšeft'; ?></button>
                 <a href="<?php echo site_url('/ksefty'); ?>" class="button">Zpět na seznam kšeftů</a>
@@ -337,12 +338,12 @@ if (!$kseft_id) {
                     ].join(' ');
                 }
 
-                $('#' + inputId).val(address);
+                jQuery('#' + inputId).val(address); // Změna $ na jQuery
             });
         }
 
         jQuery(document).ready(function($) {
-            initializeAutocomplete('kseft_location', 'map-kseft');
+            initializeAutocomplete('kseft_location', 'map'); // Změna ID mapy na "map"
 
             $('#update-google-event').on('click', function() {
                 var kseftId = $('input[name="kseft_id"]').val();
@@ -378,7 +379,8 @@ if (!$kseft_id) {
                     $.post(myTeamPlugin.ajax_url, {
                         action: 'update_google_calendar_event',
                         event_id: googleEventId,
-                        event_details: eventDetails
+                        event_details: eventDetails,
+                        kseft_id: kseftId // Přidání parametru kseft_id
                     }, function(response) {
                         if (response.success) {
                             alert('Google Calendar event updated successfully.');

@@ -164,8 +164,8 @@ jQuery(document).ready(function($) {
     if (document.getElementById('role_default_pickup_location')) {
         initializeAutocomplete('role_default_pickup_location', 'map-role-default');
     }
-    if (document.getElementById('kseft_location')) {
-        initializeAutocomplete('kseft_location', 'map');
+    if (document.getElementById('kseft_location') && document.getElementById('map')) {
+        initializeAutocomplete('kseft_location', 'map'); // Změna ID mapy na "map"
     }
     if (document.getElementById('kseft_location_wp')) {
         initializeAutocomplete('kseft_location_wp', 'map-kseft-wp');

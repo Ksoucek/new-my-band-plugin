@@ -1,9 +1,8 @@
 jQuery(document).ready(function($) {
     console.log('role-selection.js file loaded');
 
-    // Log the kseft_id to the console
-    var kseftId = $('#kseft_id').val();
-    console.log('kseft_id:', kseftId);
+    // Definice proměnné kseftId
+    var kseftId = $('#kseft_id').val() || null;
 
     function showRoleSelectionModal() {
         $('#role-selection-modal').show();
@@ -208,7 +207,8 @@ jQuery(document).ready(function($) {
             role_id: $('#role_id').val(),
             role_status: $('#role_status').val(),
             role_substitute: $('#role_substitute').val(),
-            pickup_location: $('#pickup_location').val()
+            pickup_location: $('#pickup_location').val(),
+            nonce: myTeamPlugin.nonce // Přidání nonce pro zabezpečení
         };
         console.log(`Saving role confirmation: kseft_id=${data.kseft_id}, role_id=${data.role_id}, role_status=${data.role_status}, role_substitute=${data.role_substitute}, pickup_location=${data.pickup_location}`);
         $.post(myTeamPlugin.ajax_url, data, function(response) {
@@ -314,5 +314,7 @@ jQuery(document).ready(function($) {
 
     if (kseftId) {
         loadRoleConfirmations(kseftId);
+    } else {
+        console.error('kseftId is not defined');
     }
 });

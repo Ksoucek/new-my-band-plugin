@@ -340,6 +340,9 @@ function my_team_plugin_render_meta_box($post) {
         <option value="společenská košile" <?php selected($clothing, 'společenská košile'); ?>>Společenská košile</option>
         <option value="Tmavý civil" <?php selected($clothing, 'Tmavý civil'); ?>>Tmavý civil</option>
     </select> <!-- Výběr pro oblečení -->
+    <br><br>
+    <label for="kseft_id_display">ID Kšeftu:</label>
+    <input type="text" id="kseft_id_display" value="<?php echo esc_attr($post->ID); ?>" readonly> <!-- Pole pro zobrazení ID kšeftu -->
     <?php
 }
 
@@ -446,6 +449,7 @@ function my_team_plugin_display_kseft_details($content) {
         }
 
         $custom_content .= '<h3>Detaily Kšeftu</h3>';
+        $custom_content .= '<p><strong>ID Kšeftu:</strong> ' . esc_html($kseft_id) . '</p>'; // Zobrazení ID kšeftu
         $custom_content .= '<p><strong>Lokace:</strong> ' . esc_html($location) . '</p>'; // Zobrazení lokace
         $custom_content .= '<p><strong>Čas srazu:</strong> ' . esc_html($meeting_time) . '</p>'; // Zobrazení času srazu
         $formatted_date = date_i18n('D d.m.Y', strtotime($event_date)); // Formátování data
