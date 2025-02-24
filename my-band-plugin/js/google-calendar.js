@@ -165,7 +165,9 @@ jQuery(document).ready(function($) {
         };
 
         var googleEventId = $('input[name="google_calendar_event_id"]').val(); // Získání ID události v Google Kalendáři
-        handleGoogleCalendarEvent(kseftId, eventDetails, googleEventId); // Volání funkce pro přidání nebo aktualizaci události
+        if (googleEventId) {
+            handleGoogleCalendarEvent(kseftId, eventDetails, googleEventId); // Volání funkce pro aktualizaci události
+        }
 
         this.submit(); // Odeslání formuláře
     }

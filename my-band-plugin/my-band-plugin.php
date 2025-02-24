@@ -24,7 +24,8 @@ function my_team_plugin_enqueue_scripts() {
         'site_url' => site_url(), // URL webu
         'post_id' => get_the_ID(), // ID aktuálního příspěvku
         'api_key' => get_option('my_team_plugin_openrouteservice_api_key'), // API klíč pro OpenRouteService
-        'rest_url' => rest_url('google-calendar/v1/add-to-calendar') // REST URL pro přidání do kalendáře
+        'rest_url' => rest_url('google-calendar/v1/add-to-calendar'), // REST URL pro přidání do kalendáře
+        'kseft_id' => get_the_ID() // Přidání kseft_id
      ));
     wp_enqueue_script('role-selection-script', plugins_url('/js/role-selection.js', __FILE__), array('jquery'), '1.0', true); // Načtení JS souboru pro výběr rolí
     wp_enqueue_script('google-calendar-script', plugins_url('/js/google-calendar.js', __FILE__), array('jquery', 'my-team-plugin-script'), '1.0', true); // Načtení JS souboru pro Google Kalendář

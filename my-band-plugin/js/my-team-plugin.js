@@ -167,7 +167,7 @@ jQuery(document).ready(function($) {
     if (document.getElementById('kseft_location') && document.getElementById('map')) {
         initializeAutocomplete('kseft_location', 'map'); // Změna ID mapy na "map"
     }
-    if (document.getElementById('kseft_location_wp')) {
+    if (document.getElementById('kseft_location_wp') && document.getElementById('map-kseft-wp')) {
         initializeAutocomplete('kseft_location_wp', 'map-kseft-wp');
     }
 
@@ -292,6 +292,7 @@ jQuery(document).ready(function($) {
 
     $('#role_select').on('change', function() {
         var selectedRoleId = $(this).val();
+        var kseftId = $('#kseft_id').val(); // Přidání definice proměnné kseftId
         if (selectedRoleId) {
             $('#kseft-overview-table tbody tr').each(function() {
                 var roleIds = $(this).data('role-ids');

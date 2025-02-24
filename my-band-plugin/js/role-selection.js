@@ -49,6 +49,10 @@ jQuery(document).ready(function($) {
     }
 
     function loadRoleConfirmations(kseftId) {
+        if (!kseftId) {
+            console.error('kseftId is not defined');
+            return;
+        }
         $('.role-confirmation').each(function() {
             var roleId = $(this).data('role-id');
             $.post(myTeamPlugin.ajax_url, {
@@ -252,6 +256,7 @@ jQuery(document).ready(function($) {
 
     $('#role_select').on('change', function() {
         var selectedRoleId = $(this).val();
+        var kseftId = $('#kseft_id').val() || null; // Přidání kontroly, zda je kseftId definováno
         if (selectedRoleId) {
             $('#kseft-overview-table tbody tr').each(function() {
                 var roleIds = $(this).data('role-ids');
