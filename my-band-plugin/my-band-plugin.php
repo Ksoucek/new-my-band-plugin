@@ -318,7 +318,7 @@ function my_team_plugin_render_meta_box($post) {
     <label for="kseft_meeting_time">Čas srazu:</label>
     <input type="text" name="kseft_meeting_time" id="kseft_meeting_time" value="<?php echo esc_attr($meeting_time); ?>" size="25" /> <!-- Pole pro čas srazu -->
     <br><br>
-    <div style="display: flex; justify-content: space-between;">
+    <div style="display: flex; justify-content: space_between;">
         <div style="flex: 1; margin-right: 10px;">
             <label for="kseft_event_date">Datum kšeftu:</label>
             <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($event_date); ?>" size="25" /> <!-- Pole pro datum kšeftu -->
@@ -451,6 +451,7 @@ function my_team_plugin_display_kseft_details($content) {
 
         $custom_content .= '<h3>Detaily Kšeftu</h3>';
         $custom_content .= '<p><strong>ID Kšeftu:</strong> ' . esc_html($kseft_id) . '</p>'; // Zobrazení ID kšeftu
+        $custom_content .= '<input type="hidden" id="kseft_id" value="' . esc_attr($kseft_id) . '">'; // Skryté pole pro kseft_id
         $custom_content .= '<p><strong>Lokace:</strong> ' . esc_html($location) . '</p>'; // Zobrazení lokace
         $custom_content .= '<p><strong>Čas srazu:</strong> ' . esc_html($meeting_time) . '</p>'; // Zobrazení času srazu
         $formatted_date = date_i18n('D d.m.Y', strtotime($event_date)); // Formátování data

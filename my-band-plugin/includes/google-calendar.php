@@ -180,4 +180,29 @@ function save_google_event_id() {
 add_action('wp_ajax_save_google_event_id', 'save_google_event_id');
 add_action('wp_ajax_nopriv_save_google_event_id', 'save_google_event_id');
 
+// Přidání funkce pro vytvoření Google akce
+function createGoogleCalendarEvent($kseftId, $eventDetails) {
+    $credentials_path = plugin_dir_path(__FILE__) . 'credential.json'; // Ujistěte se, že cesta je správná
+    if (!file_exists($credentials_path)) {
+        return false;
+    }
+
+    $client = new Google_Client();
+    $client->setAuthConfig($credentials_path);
+    $client->addScope(Google_Service_Calendar::CALENDAR);
+
+    $service = new Google_Service_Calendar($client);
+
+    $event = new Google_Service_Calendar_Event($eventDetails);
+
+    try {
+        $calendarId = 'primary';
+        $event = $service->events->insert($calendarId, $event);
+        update_post_meta($kseftId, 'google_calendar_event_id', $event->id); // Uložení ID události do meta dat příspěvku
+        return $event->id;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
 ?>

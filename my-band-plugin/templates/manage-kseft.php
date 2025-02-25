@@ -47,42 +47,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             update_post_meta($kseft_id, 'pickup_location_' . $role_id, $pickup_location);
         }
 
-        // Aktualizace Google Kalendáře přes AJAX
+        // Přidání nebo aktualizace Google Kalendář události
+        $eventDetails = array(
+            'summary' => $kseft_name,
+            'location' => $kseft_location,
+            'description' => $kseft_description,
+            'start' => array(
+                'dateTime' => $kseft_event_date . 'T' . ($kseft_meeting_time ? $kseft_meeting_time : '00:00') . ':00',
+                'timeZone' => 'Europe/Prague',
+            ),
+            'end' => array(
+                'dateTime' => $kseft_event_date . 'T' . ($kseft_meeting_time ? date('H:i:s', strtotime($kseft_meeting_time) + ($kseft_duration ? $kseft_duration : 24) * 3600) : '23:59:59'),
+                'timeZone' => 'Europe/Prague',
+            ),
+        );
+
         $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true);
         if ($google_event_id) {
-            ?>
-            <script>
-                jQuery(document).ready(function($) {
-                    var eventDetails = {
-                        summary: '<?php echo $kseft_name; ?>',
-                        location: '<?php echo $kseft_location; ?>',
-                        description: '<?php echo $kseft_description; ?>',
-                        start: '<?php echo $kseft_event_date . 'T' . ($kseft_meeting_time ? $kseft_meeting_time : '00:00') . ':00'; ?>',
-                        end: '<?php echo $kseft_event_date . 'T' . ($kseft_meeting_time ? date('H:i:s', strtotime($kseft_meeting_time) + ($kseft_duration ? $kseft_duration : 24) * 3600) : '23:59:59'); ?>'
-                    };
-
-                    console.log('Sending AJAX request to update Google Calendar event:', eventDetails);
-
-                    $.post(myTeamPlugin.ajax_url, {
-                        action: 'update_google_calendar_event',
-                        event_id: '<?php echo $google_event_id; ?>',
-                        event_details: eventDetails,
-                        kseft_id: '<?php echo $kseft_id; ?>' // Přidání parametru kseft_id
-                    }, function(response) {
-                        if (response.success) {
-                            console.log('Google Calendar event updated successfully.');
-                        } else {
-                            console.error('Error updating Google Calendar event:', response.error);
-                        }
-                    }).fail(function(xhr, status, error) {
-                        console.error('AJAX error:', status, error);
-                        console.error('AJAX response:', xhr.responseText);
-                    });
-                });
-            </script>
-            <?php
+            updateGoogleCalendar($google_event_id, $eventDetails);
         } else {
-            error_log('Google Calendar event ID not found for kseft ID: ' . $kseft_id);
+            createGoogleCalendarEvent($kseft_id, $eventDetails);
         }
 
         echo '<p>Kšeft byl úspěšně ' . ($kseft_id ? 'upraven' : 'vytvořen') . '.</p>';
@@ -291,7 +275,7 @@ if (!$kseft_id) {
                 <?php if ($kseft_id) : ?>
                     <a href="<?php echo add_query_arg('delete_kseft_id', $kseft_id, site_url('/manage-kseft')); ?>" class="button delete" onclick="return confirm('Opravdu chcete smazat tento kšeft?');">Smazat Kšeft</a>
                 <?php endif; ?>
-                <button type="button" class="button" id="add-to-calendar-button">Přidat do Google Kalendáře</button> <!-- Přidání tlačítka -->
+                <!-- Odebrání tlačítka "Přidat do Google Kalendáře" -->
             </div>
         </form>
         <?php if ($google_event_id) : ?>
@@ -399,64 +383,6 @@ if (!$kseft_id) {
                 e.preventDefault();
                 $('#manage-kseft-form').submit();
                 $('#update-google-event').click();
-            });
-
-            $('#add-to-calendar-button').on('click', function() {
-                var kseftId = $('#kseft_id').val();
-                var kseftName = $('input[name="kseft_name"]').val();
-                var kseftLocation = $('input[name="kseft_location"]').val();
-                var kseftMeetingTime = $('input[name="kseft_meeting_time"]').val();
-                var kseftEventDate = $('input[name="kseft_event_date"]').val();
-                var kseftDuration = $('input[name="kseft_duration"]').val();
-                var kseftDescription = $('textarea[name="kseft_description"]').val();
-
-                console.log('kseftId:', kseftId);
-                console.log('kseftName:', kseftName);
-                console.log('kseftLocation:', kseftLocation);
-                console.log('kseftMeetingTime:', kseftMeetingTime);
-                console.log('kseftEventDate:', kseftEventDate);
-                console.log('kseftDuration:', kseftDuration);
-                console.log('kseftDescription:', kseftDescription);
-
-                console.log('Php Event Details:', {
-                    summary: kseftName,
-                    location: kseftLocation,
-                    description: kseftDescription
-                });
-
-                
-
-                if (kseftMeetingTime) {
-                    var startTime = kseftEventDate + 'T' + kseftMeetingTime + ':00';
-                    var endTime = new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration : 24) * 3600 * 1000).toISOString();
-                    if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
-                        endTime = kseftEventDate + 'T23:59:59';
-                    }
-                    eventDetails.start = startTime;
-                    eventDetails.end = endTime;
-                } else {
-                    eventDetails.start = kseftEventDate;
-                    eventDetails.end = kseftEventDate;
-                }
-                var eventDetails = {
-                    summary: kseftName,
-                    location: kseftLocation,
-                    description: kseftDescription
-                };
-                $.post(myTeamPlugin.ajax_url, {
-                    action: 'create_google_calendar_event',
-                    event_details: eventDetails,
-                    kseft_id: kseftId
-                }, function(response) {
-                    if (response.success) {
-                        alert('Google Calendar event created successfully.');
-                        window.location.href = response.data.redirect_url;
-                    } else {
-                        alert('Error creating Google Calendar event: ' + response.error);
-                    }
-                }).fail(function(xhr, status, error) {
-                    alert('AJAX error: ' + status + ' ' + error);
-                });
             });
         });
     </script>
