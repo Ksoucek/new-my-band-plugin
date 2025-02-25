@@ -21,7 +21,7 @@ add_action('rest_api_init', function () {
 });
 
 // Přidání funkce pro generování JSON objektu pro vytvoření události
-function generate_event_json($summary, $start_time, $end_time, $location) {
+function generate_event_json($summary, $start_time, $end_time, $location, $description = '') {
     $event_details = [
         'summary' => $summary,
         'start' => [
@@ -30,7 +30,8 @@ function generate_event_json($summary, $start_time, $end_time, $location) {
         'end' => [
             'dateTime' => date('c', strtotime($end_time)),
         ],
-        'location' => $location
+        'location' => $location,
+        'description' => $description // Přidání popisu
     ];
 
     return json_encode(['event_details' => $event_details]);
@@ -65,6 +66,14 @@ function handle_add_to_calendar_request(WP_REST_Request $request) {
         return new WP_REST_Response(['error' => 'Invalid event details. Please provide summary, start dateTime, and location.'], 400);
     }
 
+    // Nastavení výchozí hodnoty pro description, pokud není definováno
+    if (!isset($event_details['description'])) {
+        $event_details['description'] = '';
+    }
+
+    // Logování pro ověření pole description
+    error_log('Event Description: ' . $event_details['description']);
+
     $result = add_event_to_google_calendar($event_details);
 
     if (isset($result['error'])) {
@@ -96,6 +105,7 @@ function add_event_to_google_calendar($event_details) {
     $service = new Google_Service_Calendar($client);
 
     $event = new Google_Service_Calendar_Event($event_details);
+    $event->setDescription($event_details['description']); // Přidání popisu
 
     try {
         $calendarId = 'olo0v28necdv27n6mg7psud2dc@group.calendar.google.com';
@@ -130,7 +140,7 @@ function updateGoogleCalendar($event_id, $details) {
         $event = $service->events->get($calendarId, $event_id);
         $event->setSummary($details['summary']);
         $event->setLocation($details['location']);
-        $event->setDescription($details['description']);
+        $event->setDescription($details['description']); // Přidání popisu
         $event->setStart(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['start'], 'timeZone' => 'Europe/Prague')));
         $event->setEnd(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['end'], 'timeZone' => 'Europe/Prague')));
         $updatedEvent = $service->events->update($calendarId, $event->getId(), $event);
@@ -194,6 +204,7 @@ function createGoogleCalendarEvent($kseftId, $eventDetails) {
     $service = new Google_Service_Calendar($client);
 
     $event = new Google_Service_Calendar_Event($eventDetails);
+    $event->setDescription($eventDetails['description']); // Přidání popisu
 
     try {
         $calendarId = 'primary';
