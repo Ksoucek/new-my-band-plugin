@@ -67,7 +67,8 @@ jQuery(document).ready(function($) {
             action: 'save_role_transport',
             post_id: myTeamPlugin.post_id,
             role_id: roleId,
-            transport: transport
+            transport: transport,
+            nonce: myTeamPlugin.nonce
         };
         $.post(myTeamPlugin.ajax_url, data, function(response) {
             console.log('Transport saved: ' + transport);
@@ -78,26 +79,29 @@ jQuery(document).ready(function($) {
         var roleId = $(this).data('role-id');
         var pickupTime = $(this).val();
 
-        // Kontrola formátu času (hh:mm)
-        if (!/^\d{2}:\d{2}$/.test(pickupTime)) {
+        // Kontrola formátu času (hh:mm) nebo prázdného pole
+        if (pickupTime !== '' && !/^\d{2}:\d{2}$/.test(pickupTime)) {
             alert('Neplatný formát času. Použijte formát hh:mm.');
             return;
         }
 
         // Kontrola hodnoty minut
-        var timeParts = pickupTime.split(':');
-        var hours = parseInt(timeParts[0], 10);
-        var minutes = parseInt(timeParts[1], 10);
-        if (minutes > 59) {
-            alert('Neplatná hodnota minut. Minuty musí být mezi 00 a 59.');
-            return;
+        if (pickupTime !== '') {
+            var timeParts = pickupTime.split(':');
+            var hours = parseInt(timeParts[0], 10);
+            var minutes = parseInt(timeParts[1], 10);
+            if (minutes > 59) {
+                alert('Neplatná hodnota minut. Minuty musí být mezi 00 a 59.');
+                return;
+            }
         }
 
         $.post(myTeamPlugin.ajax_url, {
             action: 'save_pickup_time',
             post_id: myTeamPlugin.post_id,
             role_id: roleId,
-            pickup_time: pickupTime
+            pickup_time: pickupTime,
+            nonce: myTeamPlugin.nonce
         }, function(response) {
             console.log('Pickup time saved:', response);
         });

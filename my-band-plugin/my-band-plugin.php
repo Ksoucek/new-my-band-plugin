@@ -556,15 +556,20 @@ function my_team_plugin_save_pickup_time() {
     $role_id = intval($_POST['role_id']); // Získání ID role
     $pickup_time = sanitize_text_field($_POST['pickup_time']); // Sanitizace času vyzvednutí
 
-    // Kontrola formátu času (hh:mm)
-    if (!preg_match('/^\d{2}:\d{2}$/', $pickup_time)) {
+    // Kontrola formátu času (hh:mm) nebo prázdného pole
+    if ($pickup_time !== '' && !preg_match('/^\d{2}:\d{2}$/', $pickup_time)) {
         echo 'Neplatný formát času. Použijte formát hh:mm.';
         wp_die();
     }
 
-    update_post_meta($post_id, 'pickup_time_' . $role_id, $pickup_time); // Uložení času vyzvednutí
+    if ($pickup_time === '') {
+        delete_post_meta($post_id, 'pickup_time_' . $role_id); // Smazání času vyzvednutí
+        echo 'Čas vyzvednutí byl smazán.';
+    } else {
+        update_post_meta($post_id, 'pickup_time_' . $role_id, $pickup_time); // Uložení času vyzvednutí
+        echo 'Čas vyzvednutí byl uložen.';
+    }
 
-    echo 'Čas vyzvednutí byl uložen.';
     wp_die();
 }
 add_action('wp_ajax_save_pickup_time', 'my_team_plugin_save_pickup_time'); // Přidání AJAX akce pro přihlášené uživatele
