@@ -223,6 +223,7 @@ add_action('save_post', 'my_team_plugin_save_role_meta_box_data'); // Přidání
 
 function my_team_plugin_display_ksefty() {
     error_log('my_team_plugin_display_ksefty function called'); // Logování volání funkce
+    $show_all = isset($_GET['show_all']) && $_GET['show_all'] === '1'; // Kontrola, zda je zaškrtnuto zobrazení všech kšeftů
     $args = array(
         'post_type' => 'kseft', // Typ příspěvku
         'post_status' => 'publish', // Stav příspěvku
@@ -231,11 +232,24 @@ function my_team_plugin_display_ksefty() {
         'orderby' => 'meta_value', // Řazení podle meta hodnoty
         'order' => 'ASC' // Řazení vzestupně
     );
+
+    if (!$show_all) {
+        $args['meta_query'] = array(
+            array(
+                'key' => 'kseft_event_date',
+                'value' => date('Y-m-d'),
+                'compare' => '>=',
+                'type' => 'DATE'
+            )
+        );
+    }
+
     $ksefty = new WP_Query($args); // Dotaz na příspěvky
     error_log('Query executed: ' . print_r($args, true)); // Logování dotazu
     $output = '<div class="business-overview" style="text-align: center;">'; // Přidání stylu pro vycentrování
     $output .= '<a href="' . site_url('/moje-ksefty') . '" class="button">Moje kšefty</a>'; // Přidání tlačítka pro přechod na "moje kšefty"
     $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>'; // Přesunutí tlačítka nahoru
+    $output .= '<form method="GET" action=""><label><input type="checkbox" name="show_all" value="1" ' . ($show_all ? 'checked' : '') . '> Zobrazit všechny kšefty</label><button type="submit" class="button">Filtrovat</button></form>'; // Přidání zaškrtávacího políčka pro zobrazení všech kšeftů
     if ($ksefty->have_posts()) {
         $output .= '<table>';
         $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></thead>';
@@ -297,6 +311,97 @@ function my_team_plugin_display_ksefty() {
     return $output;
 }
 add_shortcode('display_ksefty', 'my_team_plugin_display_ksefty'); // Přidání shortcode pro zobrazení kšeftů
+
+function my_team_plugin_display_moje_ksefty() {
+    error_log('my_team_plugin_display_moje_ksefty function called'); // Logování volání funkce
+    $show_all = isset($_GET['show_all']) && $_GET['show_all'] === '1'; // Kontrola, zda je zaškrtnuto zobrazení všech kšeftů
+    $args = array(
+        'post_type' => 'kseft', // Typ příspěvku
+        'post_status' => 'publish', // Stav příspěvku
+        'posts_per_page' => -1, // Počet příspěvků na stránku
+        'meta_key' => 'kseft_event_date', // Klíč pro řazení
+        'orderby' => 'meta_value', // Řazení podle meta hodnoty
+        'order' => 'ASC' // Řazení vzestupně
+    );
+
+    if (!$show_all) {
+        $args['meta_query'] = array(
+            array(
+                'key' => 'kseft_event_date',
+                'value' => date('Y-m-d'),
+                'compare' => '>=',
+                'type' => 'DATE'
+            )
+        );
+    }
+
+    $ksefty = new WP_Query($args); // Dotaz na příspěvky
+    error_log('Query executed: ' . print_r($args, true)); // Logování dotazu
+    $output = '<div class="business-overview" style="text-align: center;">'; // Přidání stylu pro vycentrování
+    $output .= '<a href="' . site_url('/moje-ksefty') . '" class="button">Moje kšefty</a>'; // Přidání tlačítka pro přechod na "moje kšefty"
+    $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>'; // Přesunutí tlačítka nahoru
+    $output .= '<form method="GET" action=""><label><input type="checkbox" name="show_all" value="1" ' . ($show_all ? 'checked' : '') . '> Zobrazit všechny kšefty</label><button type="submit" class="button">Filtrovat</button></form>'; // Přidání zaškrtávacího políčka pro zobrazení všech kšeftů
+    if ($ksefty->have_posts()) {
+        $output .= '<table>';
+        $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></thead>';
+        $output .= '<tbody>';
+        while ($ksefty->have_posts()) {
+            $ksefty->the_post();
+            $event_date = get_post_meta(get_the_ID(), 'kseft_event_date', true); // Získání data události
+            $location = get_post_meta(get_the_ID(), 'kseft_location', true); // Získání lokace
+            $status = get_post_meta(get_the_ID(), 'kseft_status', true); // Získání stavu
+            $obsazeni_template_id = get_post_meta(get_the_ID(), 'kseft_obsazeni_template', true); // Získání ID šablony obsazení
+            $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true); // Získání rolí
+            $all_confirmed = true; // Předpoklad, že všechny role jsou potvrzeny
+            $has_substitute = false; // Předpoklad, že žádná role nemá záskok
+            $pickup_location = ''; // Výchozí hodnota pro místo vyzvednutí
+            $pickup_time = ''; // Výchozí hodnota pro čas vyzvednutí
+            $current_role_id = isset($_COOKIE['selectedRoleId']) ? intval($_COOKIE['selectedRoleId']) : 0; // Získání aktuální role z cookie
+            if ($roles) {
+                foreach ($roles as $role_id) {
+                    $role_status = get_post_meta(get_the_ID(), 'role_status_' . $role_id, true); // Získání stavu role
+                    if ($role_status === 'Záskok') {
+                        $has_substitute = true; // Pokud je role záskok, nastaví se příznak
+                    }
+                    if ($role_status !== 'Jdu' && $role_status !== 'Záskok') {
+                        $all_confirmed = false; // Pokud role není potvrzena, nastaví se příznak
+                        break;
+                    }
+                    if ($role_id == $current_role_id) {
+                        $pickup_location = get_post_meta(get_the_ID(), 'pickup_location_' . $role_id, true); // Získání místa vyzvednutí pro aktuální roli
+                        $pickup_time = get_post_meta(get_the_ID(), 'pickup_time_' . $role_id, true); // Získání času vyzvednutí pro aktuální roli
+                    }
+                }
+            } else {
+                $all_confirmed = false; // Pokud nejsou žádné role, nastaví se příznak
+            }
+            if ($all_confirmed) {
+                $obsazeni_class = 'obsazeno'; // Pokud jsou všechny role potvrzeny, nastaví se třída
+                $obsazeni_text = $has_substitute ? 'Obsazeno se záskokem' : 'Obsazeno'; // Pokud je záskok, nastaví se text
+            } else {
+                $obsazeni_class = 'neobsazeno'; // Pokud nejsou všechny role potvrzeny, nastaví se třída
+                $obsazeni_text = 'Neobsazeno'; // Nastaví se text
+            }
+            $formatted_date = date_i18n('D d.m.Y', strtotime($event_date)); // Formátování data
+            $output .= '<tr>';
+            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($formatted_date) . '</a></td>'; // Přidání odkazu na termín
+            $output .= '<td><a href="' . get_permalink() . '">' . get_the_title() . '</a></td>'; // Přidání odkazu na název
+            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($location) . '</a></td>'; // Přidání odkazu na lokaci
+            $output .= '<td><a href="' . get_permalink() . '" class="button kseft-status-button ' . esc_attr($obsazeni_class) . '">' . esc_html($obsazeni_text) . '</a></td>'; // Přidání odkazu na stav obsazení
+            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($status) . '</a></td>'; // Přidání odkazu na stav
+            $output .= '</tr>';
+        }
+        $output .= '</tbody>';
+        $output .= '</table>';
+        wp_reset_postdata(); // Resetování dotazu
+    } else {
+        $output .= '<p>Žádné kšefty nejsou k dispozici.</p>'; // Zobrazení zprávy, pokud nejsou žádné kšefty
+    }
+    $output .= '</div>';
+    error_log('Output: ' . $output); // Logování výstupu
+    return $output;
+}
+add_shortcode('display_moje_ksefty', 'my_team_plugin_display_moje_ksefty'); // Přidání shortcode pro zobrazení mých kšeftů
 
 function my_team_plugin_add_meta_boxes() {
     add_meta_box('kseft_details', 'Kšeft Details', 'my_team_plugin_render_meta_box', 'kseft', 'normal', 'high'); // Přidání metaboxu pro detaily kšeftu

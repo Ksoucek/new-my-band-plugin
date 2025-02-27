@@ -141,8 +141,8 @@ function updateGoogleCalendar($event_id, $details) {
         $event->setSummary($details['summary']);
         $event->setLocation($details['location']);
         $event->setDescription($details['description']); // Přidání popisu
-        $event->setStart(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['start'], 'timeZone' => 'Europe/Prague')));
-        $event->setEnd(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['end'], 'timeZone' => 'Europe/Prague')));
+        $event->setStart(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['start']['dateTime'], 'timeZone' => 'Europe/Prague')));
+        $event->setEnd(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['end']['dateTime'], 'timeZone' => 'Europe/Prague')));
         $updatedEvent = $service->events->update($calendarId, $event->getId(), $event);
         return true;
     } catch (Exception $e) {
