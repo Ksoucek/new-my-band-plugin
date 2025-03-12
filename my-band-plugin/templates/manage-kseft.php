@@ -39,12 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
         foreach ($roles as $role) {
             $role_id = $role->ID;
-            $role_status = isset($_POST['role_status_' . $role_id]) ? sanitize_text_field($_POST['role_status_' . $role_id]) : '';
-            $role_substitute = isset($_POST['role_substitute_' . $role_id]) ? sanitize_text_field($_POST['role_substitute_' . $role_id]) : '';
-            $pickup_location = isset($_POST['pickup_location_' . $role_id]) ? sanitize_text_field($_POST['pickup_location_' . $role_id]) : '';
+            $role_status = isset($_POST['role_status_' . $role_id]) ? sanitize_text_field($_POST['role_status_' . $role_id]) : get_post_meta($kseft_id, 'role_status_' . $role_id, true);
+            $role_substitute = isset($_POST['role_substitute_' . $role_id]) ? sanitize_text_field($_POST['role_substitute_' . $role_id]) : get_post_meta($kseft_id, 'role_substitute_' . $role_id, true);
+            $pickup_location = isset($_POST['pickup_location_' . $role_id]) ? sanitize_text_field($_POST['pickup_location_' . $role_id]) : get_post_meta($kseft_id, 'pickup_location_' . $role_id, true);
+            $pickup_time = isset($_POST['pickup_time_' . $role_id]) ? sanitize_text_field($_POST['pickup_time_' . $role_id]) : get_post_meta($kseft_id, 'pickup_time_' . $role_id, true);
             update_post_meta($kseft_id, 'role_status_' . $role_id, $role_status);
             update_post_meta($kseft_id, 'role_substitute_' . $role_id, $role_substitute);
             update_post_meta($kseft_id, 'pickup_location_' . $role_id, $pickup_location);
+            update_post_meta($kseft_id, 'pickup_time_' . $role_id, $pickup_time);
         }
 
         // Přidání nebo aktualizace Google Kalendář události
@@ -106,10 +108,12 @@ foreach ($roles as $role) {
     $role_status_key = 'role_status_' . $role_id;
     $role_substitute_key = 'role_substitute_' . $role_id;
     $pickup_location_key = 'pickup_location_' . $role_id;
+    $pickup_time_key = 'pickup_time_' . $role_id;
 
     $role_status = isset($meta[$role_status_key]) ? $meta[$role_status_key][0] : '';
     $role_substitute = isset($meta[$role_substitute_key]) ? $meta[$role_substitute_key][0] : '';
     $pickup_location = isset($meta[$pickup_location_key]) ? $meta[$pickup_location_key][0] : '';
+    $pickup_time = isset($meta[$pickup_time_key]) ? $meta[$pickup_time_key][0] : '';
 }
 
 if (!$kseft_id) {
