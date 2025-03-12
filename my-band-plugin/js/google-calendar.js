@@ -65,7 +65,7 @@ jQuery(document).ready(function($) {
             error: function(xhr, status, error) {
                 console.error('AJAX error:', error); // Logování chyby AJAX požadavku
                 console.error('Response:', xhr.responseText); // Logování odpovědi AJAX požadavku
-                alert('Akce nebyla upravena na google kalendáři update-GC.JS.'); // Zobrazení chybové zprávy
+                // alert('Akce nebyla upravena na google kalendáři update-GC.JS.'); // Zobrazení chybové zprávy
             }
         });
     }

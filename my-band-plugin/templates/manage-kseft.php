@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kseft_location = sanitize_text_field($_POST['kseft_location']);
     $kseft_meeting_time = sanitize_text_field($_POST['kseft_meeting_time']);
     $kseft_event_date = sanitize_text_field($_POST['kseft_event_date']);
-    $kseft_duration = intval($_POST['kseft_duration']); // Přidání pole pro předpokládanou délku
+    $kseft_duration = floatval($_POST['kseft_duration']); // Upravte na floatval pro podporu necelých hodin
     $kseft_obsazeni_template = sanitize_text_field($_POST['kseft_obsazeni_template']);
     $kseft_status = sanitize_text_field($_POST['kseft_status']); // Přidání pole pro stav
     $kseft_clothing = sanitize_text_field($_POST['kseft_clothing']); // Přidání pole pro oblečení
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'timeZone' => 'Europe/Prague',
             ),
             'end' => array(
-                'dateTime' => $kseft_event_date . 'T' . ($kseft_meeting_time ? date('H:i:s', strtotime($kseft_meeting_time) + ($kseft_duration ? $kseft_duration : 24) * 3600) : '23:59:59'),
+                'dateTime' => $kseft_event_date . 'T' . ($kseft_meeting_time ? date('H:i:s', strtotime($kseft_meeting_time) + ($kseft_duration ? $kseft_duration * 3600 : 24 * 3600)) : '23:59:59'),
                 'timeZone' => 'Europe/Prague',
             ),
         );
@@ -229,7 +229,7 @@ if (!$kseft_id) {
                 </div>
                 <div class="form-group">
                     <label for="kseft_duration">Předpokládaná délka (v hodinách):</label>
-                    <input type="number" name="kseft_duration" id="kseft_duration" value="<?php echo esc_attr($kseft_duration); ?>">
+                    <input type="number" step="0.1" name="kseft_duration" id="kseft_duration" value="<?php echo esc_attr($kseft_duration); ?>"> <!-- Přidání atributu step pro podporu necelých hodin -->
                 </div>
             </div>
             <div class="form-group-inline">
@@ -275,7 +275,7 @@ if (!$kseft_id) {
                 <?php if ($kseft_id) : ?>
                     <a href="<?php echo add_query_arg('delete_kseft_id', $kseft_id, site_url('/manage-kseft')); ?>" class="button delete" onclick="return confirm('Opravdu chcete smazat tento kšeft?');">Smazat Kšeft</a>
                 <?php endif; ?>
-                <!-- Odebrání tlačítka "Přidat do Google Kalendáře" -->
+                <button type="button" class="button" id="add-transport-to-description">Přidat dopravu do popisu</button> <!-- Přidání tlačítka pro přidání dopravy do popisu -->
             </div>
         </form>
         <?php if ($google_event_id) : ?>
@@ -347,7 +347,7 @@ if (!$kseft_id) {
 
                 if (kseftMeetingTime) {
                     var startTime = kseftEventDate + 'T' + kseftMeetingTime + ':00';
-                    var endTime = new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration : 24) * 3600 * 1000).toISOString();
+                    var endTime = new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration * 3600 * 1000 : 24 * 3600 * 1000)).toISOString(); // Úprava pro podporu necelých hodin
                     if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
                         endTime = kseftEventDate + 'T23:59:59';
                     }
@@ -383,6 +383,49 @@ if (!$kseft_id) {
                 e.preventDefault();
                 $('#manage-kseft-form').submit();
                 $('#update-google-event').click();
+            });
+
+            $('#add-transport-to-description').on('click', function() {
+                var transportText = 'Doprava:\n';
+                var transportMap = {};
+
+                <?php foreach ($roles as $role) : ?>
+                    var roleId = <?php echo $role->ID; ?>;
+                    var transport = '<?php echo get_post_meta($kseft_id, 'transport_' . $role->ID, true); ?>';
+                    var playerName = '<?php echo get_post_meta($role->ID, 'role_default_player', true); ?>';
+                    var pickupTime = '<?php echo get_post_meta($kseft_id, 'pickup_time_' . $role->ID, true); ?>';
+                    var pickupLocation = '<?php echo get_post_meta($kseft_id, 'pickup_location_' . $role->ID, true); ?>';
+
+                    if (transport) {
+                        if (!transportMap[transport]) {
+                            transportMap[transport] = [];
+                        }
+                        var playerInfo = playerName;
+                        if (pickupTime || pickupLocation) {
+                            playerInfo += ' (';
+                            if (pickupTime) {
+                                playerInfo += pickupTime;
+                            }
+                            if (pickupTime && pickupLocation) {
+                                playerInfo += ', ';
+                            }
+                            if (pickupLocation) {
+                                playerInfo += pickupLocation;
+                            }
+                            playerInfo += ')';
+                        }
+                        transportMap[transport].push(playerInfo);
+                    }
+                <?php endforeach; ?>
+
+                for (var transport in transportMap) {
+                    if (transportMap[transport].length > 0) {
+                        transportText += transport + ' - ' + transportMap[transport].join(', ') + '\n';
+                    }
+                }
+
+                var currentDescription = $('#kseft_description').val();
+                $('#kseft_description').val(currentDescription + '\n' + transportText);
             });
         });
     </script>
