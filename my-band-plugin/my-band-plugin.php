@@ -564,7 +564,7 @@ function my_team_plugin_display_kseft_details($content) {
         $custom_content .= '<p><strong>Předpokládaná délka:</strong> ' . esc_html($kseft_duration) . ' hodin</p>'; // Zobrazení předpokládané délky
         $custom_content .= '<p><strong>Status:</strong> ' . esc_html($status) . '</p>'; // Zobrazení stavu
         $custom_content .= '<p><strong>Oblečení:</strong> ' . esc_html($clothing) . '</p>'; // Zobrazení oblečení
-        $custom_content .= '<p><strong>Popis:</strong> ' . esc_html($description) . '</p>'; // Zobrazení popisu
+        $custom_content .= '<p><strong>Popis:</strong> ' . wpautop($description) . '</p>'; // Zobrazení popisu s HTML úpravami
         if ($obsazeni_template) {
             $custom_content .= '<h4>Obsazení:</h4>';
             $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true); // Získání rolí
