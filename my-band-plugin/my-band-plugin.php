@@ -412,7 +412,8 @@ function my_team_plugin_render_meta_box($post) {
     $location = get_post_meta($post->ID, 'kseft_location', true); // Získání lokace
     $meeting_time = get_post_meta($post->ID, 'kseft_meeting_time', true); // Získání času srazu
     $event_date = get_post_meta($post->ID, 'kseft_event_date', true); // Získání data události
-    $kseft_duration = get_post_meta($post->ID, 'kseft_duration', true); // Získání předpokládané délky
+    $performance_start = get_post_meta($post->ID, 'kseft_performance_start', true); // Získání začátku vystoupení
+    $performance_end = get_post_meta($post->ID, 'kseft_performance_end', true); // Získání konce vystoupení
     $status = get_post_meta($post->ID, 'kseft_status', true); // Získání stavu
     $clothing = get_post_meta($post->ID, 'kseft_clothing', true); // Získání oblečení
     ?>
@@ -428,9 +429,13 @@ function my_team_plugin_render_meta_box($post) {
             <label for="kseft_event_date">Datum kšeftu:</label>
             <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($event_date); ?>" size="25" /> <!-- Pole pro datum kšeftu -->
         </div>
+        <div style="flex: 1; margin-right: 10px;">
+            <label for="kseft_performance_start">Začátek vystoupení:</label>
+            <input type="time" name="kseft_performance_start" id="kseft_performance_start" value="<?php echo esc_attr($performance_start); ?>" size="25" /> <!-- Pole pro začátek vystoupení -->
+        </div>
         <div style="flex: 1;">
-            <label for="kseft_duration">Předpokládaná délka (v hodinách):</label>
-            <input type="number" name="kseft_duration" id="kseft_duration" value="<?php echo esc_attr($kseft_duration); ?>" size="25" /> <!-- Pole pro předpokládanou délku -->
+            <label for="kseft_performance_end">Konec vystoupení:</label>
+            <input type="time" name="kseft_performance_end" id="kseft_performance_end" value="<?php echo esc_attr($performance_end); ?>" size="25" /> <!-- Pole pro konec vystoupení -->
         </div>
     </div>
     <br><br>
@@ -447,8 +452,6 @@ function my_team_plugin_render_meta_box($post) {
         <option value="Tmavý civil" <?php selected($clothing, 'Tmavý civil'); ?>>Tmavý civil</option>
     </select> <!-- Výběr pro oblečení -->
     <br><br>
-    <label for="kseft_id_display">ID Kšeftu:</label>
-    <input type="text" id="kseft_id_display" value="<?php echo esc_attr($post->ID); ?>" readonly> <!-- Pole pro zobrazení ID kšeftu -->
     <?php
 }
 
@@ -462,8 +465,11 @@ function my_team_plugin_save_meta_box_data($post_id) {
     if (array_key_exists('kseft_event_date', $_POST)) {
         update_post_meta($post_id, 'kseft_event_date', sanitize_text_field($_POST['kseft_event_date'])); // Uložení data události
     }
-    if (array_key_exists('kseft_duration', $_POST)) {
-        update_post_meta($post_id, 'kseft_duration', intval($_POST['kseft_duration'])); // Uložení předpokládané délky
+    if (array_key_exists('kseft_performance_start', $_POST)) {
+        update_post_meta($post_id, 'kseft_performance_start', sanitize_text_field($_POST['kseft_performance_start'])); // Uložení začátku vystoupení
+    }
+    if (array_key_exists('kseft_performance_end', $_POST)) {
+        update_post_meta($post_id, 'kseft_performance_end', sanitize_text_field($_POST['kseft_performance_end'])); // Uložení konce vystoupení
     }
     if (array_key_exists('kseft_status', $_POST)) {
         update_post_meta($post_id, 'kseft_status', sanitize_text_field($_POST['kseft_status'])); // Uložení stavu
@@ -522,7 +528,8 @@ function my_team_plugin_display_kseft_details($content) {
         $location = get_post_meta($kseft_id, 'kseft_location', true); // Získání lokace
         $meeting_time = get_post_meta($kseft_id, 'kseft_meeting_time', true); // Získání času srazu
         $event_date = get_post_meta($kseft_id, 'kseft_event_date', true); // Získání data události
-        $kseft_duration = get_post_meta($kseft_id, 'kseft_duration', true); // Získání předpokládané délky
+        $performance_start = get_post_meta($kseft_id, 'kseft_performance_start', true); // Získání začátku vystoupení
+        $performance_end = get_post_meta($kseft_id, 'kseft_performance_end', true); // Získání konce vystoupení
         $status = get_post_meta($kseft_id, 'kseft_status', true); // Získání stavu
         $clothing = get_post_meta($kseft_id, 'kseft_clothing', true); // Získání oblečení
         $description = get_post_meta($kseft_id, 'kseft_description', true); // Získání popisu
@@ -561,7 +568,8 @@ function my_team_plugin_display_kseft_details($content) {
         $custom_content .= '<p><strong>Čas srazu:</strong> ' . esc_html($meeting_time) . '</p>'; // Zobrazení času srazu
         $formatted_date = date_i18n('D d.m.Y', strtotime($event_date)); // Formátování data
         $custom_content .= '<p><strong>Datum kšeftu:</strong> ' . esc_html($formatted_date) . '</p>'; // Zobrazení data kšeftu
-        $custom_content .= '<p><strong>Předpokládaná délka:</strong> ' . esc_html($kseft_duration) . ' hodin</p>'; // Zobrazení předpokládané délky
+        $custom_content .= '<p><strong>Začátek vystoupení:</strong> ' . esc_html($performance_start) . '</p>'; // Zobrazení začátku vystoupení
+        $custom_content .= '<p><strong>Konec vystoupení:</strong> ' . esc_html($performance_end) . '</p>'; // Zobrazení konce vystoupení
         $custom_content .= '<p><strong>Status:</strong> ' . esc_html($status) . '</p>'; // Zobrazení stavu
         $custom_content .= '<p><strong>Oblečení:</strong> ' . esc_html($clothing) . '</p>'; // Zobrazení oblečení
         $custom_content .= '<p><strong>Popis:</strong> ' . wpautop($description) . '</p>'; // Zobrazení popisu s HTML úpravami
@@ -1031,20 +1039,23 @@ add_action('wp_ajax_nopriv_test_openai_api', 'my_team_plugin_test_openai_api'); 
 
 function my_team_plugin_get_event_details() {
     $post_id = intval($_POST['kseft_id']); // Získání ID příspěvku
-    $kseft_duration = get_post_meta($post_id, 'kseft_duration', true); // Získání předpokládané délky
     $event_date = get_post_meta($post_id, 'kseft_event_date', true); // Získání data události
     $meeting_time = get_post_meta($post_id, 'kseft_meeting_time', true); // Získání času srazu
     $kseft_name = get_the_title($post_id); // Získání názvu kšeftu
     $kseft_location = get_post_meta($post_id, 'kseft_location', true); // Získání lokace
-
+    // Nová pole pro začátek a konec vystoupení:
+    $performance_start = get_post_meta($post_id, 'kseft_performance_start', true);
+    $performance_end = get_post_meta($post_id, 'kseft_performance_end', true);
+    
     $response = array(
         'event_date' => $event_date,
         'meeting_time' => $meeting_time,
         'kseft_name' => $kseft_name,
         'kseft_location' => $kseft_location,
-        'kseft_duration' => $kseft_duration
+        'performance_start' => $performance_start,
+        'performance_end' => $performance_end
     );
-
+    
     wp_send_json_success($response); // Odeslání úspěšné zprávy
 }
 add_action('wp_ajax_get_event_details', 'my_team_plugin_get_event_details'); // Přidání AJAX akce pro přihlášené uživatele

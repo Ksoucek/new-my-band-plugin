@@ -86,34 +86,25 @@ jQuery(document).ready(function($) {
         }, function(response) {
             if (response.success) {
                 var eventDate = response.data.event_date; // Datum události
-                var meetingTime = response.data.meeting_time; // Čas srazu
+                var startTime = response.data.performance_start; // Začátek vystoupení
+                var endTime = response.data.performance_end; // Konec vystoupení
                 var kseftName = response.data.kseft_name; // Název kšeftu
                 var kseftLocation = response.data.kseft_location; // Lokace kšeftu
-                var kseft_duration = response.data.kseft_duration || 2; // Předpokládaná délka v hodinách, výchozí hodnota je 2 hodiny
                 var kseftDescription = response.data.kseft_description; // Popis kšeftu
 
                 var eventDetails = {
                     summary: kseftName, // Název události
                     location: kseftLocation, // Lokace události
                     description: kseftDescription, // Popis události
-                    start: {}, // Začátek události
-                    end: {} // Konec události
+                    start: {
+                        dateTime: eventDate + 'T' + startTime + ':00', // Začátek události
+                        timeZone: 'Europe/Prague' // Časová zóna
+                    },
+                    end: {
+                        dateTime: eventDate + 'T' + endTime + ':00', // Konec události
+                        timeZone: 'Europe/Prague' // Časová zóna
+                    }
                 };
-
-                if (meetingTime) {
-                    // Formátování datumu a času
-                    var startDateTime = new Date(eventDate + 'T' + meetingTime + ':00').toISOString(); // Začátek události
-                    var endDateTime = new Date(new Date(eventDate + 'T' + meetingTime + ':00').getTime() + kseft_duration * 60 * 60 * 1000).toISOString(); // Konec události
-
-                    eventDetails.start.dateTime = startDateTime; // Nastavení začátku události
-                    eventDetails.end.dateTime = endDateTime; // Nastavení konce události
-                    eventDetails.start.timeZone = 'Europe/Prague'; // Nastavení časové zóny
-                    eventDetails.end.timeZone = 'Europe/Prague'; // Nastavení časové zóny
-                } else {
-                    // Nastavení akce jako celodenní
-                    eventDetails.start.date = eventDate; // Datum začátku události
-                    eventDetails.end.date = eventDate; // Datum konce události
-                }
 
                 console.log('JS Event details:', eventDetails); // Logování detailů události
 
@@ -139,7 +130,8 @@ jQuery(document).ready(function($) {
         var kseftLocation = $('input[name="kseft_location"]').val(); // Získání lokace kšeftu
         var kseftMeetingTime = $('input[name="kseft_meeting_time"]').val(); // Získání času srazu
         var kseftEventDate = $('input[name="kseft_event_date"]').val(); // Získání data kšeftu
-        var kseftDuration = $('input[name="kseft_duration"]').val(); // Získání délky kšeftu
+        var kseftStartTime = $('input[name="kseft_performance_start"]').val(); // Získání začátku vystoupení
+        var kseftEndTime = $('input[name="kseft_performance_end"]').val(); // Získání konce vystoupení
         var kseftStatus = $('select[name="kseft_status"]').val(); // Získání stavu kšeftu
         var kseftDescription = $('textarea[name="kseft_description"]').val(); // Získání popisu kšeftu
 
@@ -149,19 +141,18 @@ jQuery(document).ready(function($) {
             return; // Ukončení funkce
         }
 
-        var startTime = kseftMeetingTime ? kseftEventDate + 'T' + kseftMeetingTime + ':00' : kseftEventDate + 'T00:00:00'; // Začátek události
-        var endTime = kseftMeetingTime ? new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration : 24) * 3600 * 1000).toISOString() : kseftEventDate + 'T23:59:59'; // Konec události
-
-        if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) { // Kontrola platnosti datumu a času
-            endTime = kseftEventDate + 'T23:59:59'; // Nastavení konce události na konec dne
-        }
-
         var eventDetails = {
             summary: kseftName, // Název události
             location: kseftLocation, // Lokace události
             description: kseftDescription, // Popis události
-            start: startTime, // Začátek události
-            end: endTime // Konec události
+            start: {
+                dateTime: kseftEventDate + 'T' + kseftStartTime + ':00', // Začátek události
+                timeZone: 'Europe/Prague' // Časová zóna
+            },
+            end: {
+                dateTime: kseftEventDate + 'T' + kseftEndTime + ':00', // Konec události
+                timeZone: 'Europe/Prague' // Časová zóna
+            }
         };
 
         var googleEventId = $('input[name="google_calendar_event_id"]').val(); // Získání ID události v Google Kalendáři

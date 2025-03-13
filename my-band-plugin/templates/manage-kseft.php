@@ -7,7 +7,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kseft_location = sanitize_text_field($_POST['kseft_location']);
     $kseft_meeting_time = sanitize_text_field($_POST['kseft_meeting_time']);
     $kseft_event_date = sanitize_text_field($_POST['kseft_event_date']);
-    $kseft_duration = floatval($_POST['kseft_duration']); // Upravte na floatval pro podporu necelých hodin
+    $kseft_performance_start = sanitize_text_field($_POST['kseft_performance_start']); // Přidání pole pro začátek vystoupení
+    $kseft_performance_end = sanitize_text_field($_POST['kseft_performance_end']); // Přidání pole pro konec vystoupení
     $kseft_obsazeni_template = sanitize_text_field($_POST['kseft_obsazeni_template']);
     $kseft_status = sanitize_text_field($_POST['kseft_status']); // Přidání pole pro stav
     $kseft_clothing = sanitize_text_field($_POST['kseft_clothing']); // Přidání pole pro oblečení
@@ -30,7 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         update_post_meta($kseft_id, 'kseft_location', $kseft_location);
         update_post_meta($kseft_id, 'kseft_meeting_time', $kseft_meeting_time);
         update_post_meta($kseft_id, 'kseft_event_date', $kseft_event_date);
-        update_post_meta($kseft_id, 'kseft_duration', $kseft_duration); // Uložení pole pro předpokládanou délku
+        update_post_meta($kseft_id, 'kseft_performance_start', $kseft_performance_start); // Uložení pole pro začátek vystoupení
+        update_post_meta($kseft_id, 'kseft_performance_end', $kseft_performance_end); // Uložení pole pro konec vystoupení
         update_post_meta($kseft_id, 'kseft_obsazeni_template', $kseft_obsazeni_template);
         update_post_meta($kseft_id, 'kseft_status', $kseft_status); // Uložení pole pro stav
         update_post_meta($kseft_id, 'kseft_clothing', $kseft_clothing); // Uložení pole pro oblečení
@@ -55,11 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'location' => $kseft_location,
             'description' => $kseft_description,
             'start' => array(
-                'dateTime' => $kseft_event_date . 'T' . ($kseft_meeting_time ? $kseft_meeting_time : '00:00') . ':00',
+                'dateTime' => $kseft_event_date . 'T' . ($kseft_performance_start ? $kseft_performance_start : '00:00') . ':00',
                 'timeZone' => 'Europe/Prague',
             ),
             'end' => array(
-                'dateTime' => $kseft_event_date . 'T' . ($kseft_meeting_time ? date('H:i:s', strtotime($kseft_meeting_time) + ($kseft_duration ? $kseft_duration * 3600 : 24 * 3600)) : '23:59:59'),
+                'dateTime' => $kseft_event_date . 'T' . ($kseft_performance_end ? $kseft_performance_end : '23:59') . ':00',
                 'timeZone' => 'Europe/Prague',
             ),
         );
@@ -94,7 +96,8 @@ $kseft_name = $kseft ? $kseft->post_title : '';
 $kseft_location = $kseft ? get_post_meta($kseft_id, 'kseft_location', true) : '';
 $kseft_meeting_time = $kseft ? get_post_meta($kseft_id, 'kseft_meeting_time', true) : '';
 $kseft_event_date = $kseft ? get_post_meta($kseft_id, 'kseft_event_date', true) : '';
-$kseft_duration = $kseft ? get_post_meta($kseft_id, 'kseft_duration', true) : ''; // Načtení pole pro předpokládanou délku
+$kseft_performance_start = $kseft ? get_post_meta($kseft_id, 'kseft_performance_start', true) : ''; // Načtení pole pro začátek vystoupení
+$kseft_performance_end = $kseft ? get_post_meta($kseft_id, 'kseft_performance_end', true) : ''; // Načtení pole pro konec vystoupení
 $kseft_obsazeni_template = $kseft ? get_post_meta($kseft_id, 'kseft_obsazeni_template', true) : '';
 $kseft_status = $kseft ? get_post_meta($kseft_id, 'kseft_status', true) : ''; // Načtení pole pro stav
 $kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : ''; // Načtení pole pro oblečení
@@ -232,8 +235,12 @@ if (!$kseft_id) {
                     <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($kseft_event_date); ?>" required>
                 </div>
                 <div class="form-group">
-                    <label for="kseft_duration">Předpokládaná délka (v hodinách):</label>
-                    <input type="number" step="0.1" name="kseft_duration" id="kseft_duration" value="<?php echo esc_attr($kseft_duration); ?>"> <!-- Přidání atributu step pro podporu necelých hodin -->
+                    <label for="kseft_performance_start">Začátek vystoupení:</label>
+                    <input type="time" name="kseft_performance_start" id="kseft_performance_start" value="<?php echo esc_attr($kseft_performance_start); ?>" required> <!-- Přidání pole pro začátek vystoupení -->
+                </div>
+                <div class="form-group">
+                    <label for="kseft_performance_end">Konec vystoupení:</label>
+                    <input type="time" name="kseft_performance_end" id="kseft_performance_end" value="<?php echo esc_attr($kseft_performance_end); ?>" required> <!-- Přidání pole pro konec vystoupení -->
                 </div>
             </div>
             <div class="form-group-inline">
@@ -339,28 +346,24 @@ if (!$kseft_id) {
                 var kseftLocation = $('input[name="kseft_location"]').val();
                 var kseftMeetingTime = $('input[name="kseft_meeting_time"]').val();
                 var kseftEventDate = $('input[name="kseft_event_date"]').val();
-                var kseftDuration = $('input[name="kseft_duration"]').val();
+                var kseftStartTime = $('input[name="kseft_performance_start"]').val(); // Přidání pole pro začátek vystoupení
+                var kseftEndTime = $('input[name="kseft_performance_end"]').val(); // Přidání pole pro konec vystoupení
                 var kseftStatus = $('select[name="kseft_status"]').val();
                 var kseftDescription = $('textarea[name="kseft_description"]').val();
 
                 var eventDetails = {
                     summary: kseftName,
                     location: kseftLocation,
-                    description: kseftDescription
-                };
-
-                if (kseftMeetingTime) {
-                    var startTime = kseftEventDate + 'T' + kseftMeetingTime + ':00';
-                    var endTime = new Date(new Date(startTime).getTime() + (kseftDuration ? kseftDuration * 3600 * 1000 : 24 * 3600 * 1000)).toISOString(); // Úprava pro podporu necelých hodin
-                    if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
-                        endTime = kseftEventDate + 'T23:59:59';
+                    description: kseftDescription,
+                    start: {
+                        dateTime: kseftEventDate + 'T' + kseftStartTime + ':00',
+                        timeZone: 'Europe/Prague'
+                    },
+                    end: {
+                        dateTime: kseftEventDate + 'T' + kseftEndTime + ':00',
+                        timeZone: 'Europe/Prague'
                     }
-                    eventDetails.start = startTime;
-                    eventDetails.end = endTime;
-                } else {
-                    eventDetails.start = kseftEventDate;
-                    eventDetails.end = kseftEventDate;
-                }
+                };
 
                 var googleEventId = $('input[name="google_calendar_event_id"]').val();
                 if (googleEventId) {
