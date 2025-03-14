@@ -1,4 +1,90 @@
 <?php
+// Přidání heslové ochrany stránky pomocí cookie
+$correct_password = get_option('my_team_plugin_manage_kseft_password', 'heslo123'); // Heslo nastavené v nastavení pluginu s výchozí hodnotou 'heslo123'
+if (!isset($_COOKIE['manage_kseft_access']) || $_COOKIE['manage_kseft_access'] !== md5($correct_password)) {
+    if (isset($_POST['manage_kseft_password'])) {
+        $user_password = trim($_POST['manage_kseft_password']);
+        $expected_password = trim($correct_password);
+        error_log('User password: ' . $user_password); // ladící záznam
+        error_log('Expected password: ' . $expected_password); // ladící záznam
+        if ($user_password === $expected_password) {
+            setcookie('manage_kseft_access', md5($expected_password), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+            header("Location: " . $_SERVER['REQUEST_URI']);
+            exit;
+        } else {
+            echo '<p style="color:red;">Nesprávné heslo.</p>';
+        }
+    } else {
+        ?>
+        <!DOCTYPE html>
+        <html lang="cs">
+        <head>
+            <meta charset="UTF-8">
+            <title>Přihlášení</title>
+            <style>
+                body {
+                    background-color: #f0f0f0;
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                }
+                .login-container {
+                    background: #fff;
+                    padding: 30px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    text-align: center;
+                }
+                .login-container h2 {
+                    margin-bottom: 20px;
+                    color: #0073aa;
+                }
+                .login-container input[type="password"] {
+                    width: 80%;
+                    padding: 10px;
+                    margin-bottom: 15px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    font-size: 16px;
+                }
+                .login-container input[type="submit"] {
+                    padding: 10px 20px;
+                    background-color: #0073aa;
+                    color: #fff;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 16px;
+                }
+                .login-container input[type="submit"]:hover {
+                    background-color: #005177;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="login-container">
+                <?php
+                if (isset($_POST['manage_kseft_password'])) {
+                    echo '<p style="color:red;">Nesprávné heslo.</p>';
+                }
+                ?>
+                <h2>Prosím zadejte heslo</h2>
+                <form method="post">
+                    <input type="password" name="manage_kseft_password" placeholder="Heslo">
+                    <br>
+                    <input type="submit" value="Přihlásit">
+                </form>
+            </div>
+        </body>
+        </html>
+        <?php
+    }
+    exit;
+}
+
 /* Template Name: Manage Kseft */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -917,11 +917,13 @@ function my_team_plugin_render_settings_page() {
     <?php
 }
 
+// ...existing code...
 function my_team_plugin_register_settings() {
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_google_maps_api_key'); // Registrace nastavení pro Google Maps API klíč
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_openrouteservice_api_key'); // Registrace nastavení pro OpenRouteService API klíč
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_openai_api_key'); // Registrace nastavení pro OpenAI API klíč
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_google_calendar_api_key'); // Registrace nastavení pro Google Calendar API klíč
+    register_setting('my_team_plugin_settings_group', 'my_team_plugin_manage_kseft_password'); // Registrace hesla pro správu Kšeftů
 
     add_settings_section(
         'my_team_plugin_settings_section',
@@ -961,8 +963,24 @@ function my_team_plugin_register_settings() {
         'my-team-plugin-settings',
         'my_team_plugin_settings_section'
     );
+
+    add_settings_field(
+        'my_team_plugin_manage_kseft_password',
+        'Heslo pro správu Kšeftů',
+        'my_team_plugin_manage_kseft_password_callback',
+        'my-team-plugin-settings',
+        'my_team_plugin_settings_section'
+    );
 }
-add_action('admin_init', 'my_team_plugin_register_settings'); // Přidání akce pro registraci nastavení
+add_action('admin_init', 'my_team_plugin_register_settings'); // ...existing code...
+
+function my_team_plugin_manage_kseft_password_callback() {
+    $password = get_option('my_team_plugin_manage_kseft_password', 'heslo123');
+    ?>
+    <input type="text" name="my_team_plugin_manage_kseft_password" value="<?php echo esc_attr($password); ?>" size="50"> <!-- Pole pro heslo pro správu Kšeftů -->
+    <?php
+}
+// ...existing code...
 
 function my_team_plugin_google_maps_api_key_callback() {
     $api_key = get_option('my_team_plugin_google_maps_api_key'); // Získání Google Maps API klíče
@@ -1151,9 +1169,6 @@ function my_team_plugin_kseft_overview_shortcode() {
     ?>
     <div id="selected-role-display" style="margin-bottom: 20px; font-weight: bold; cursor: pointer;"></div>
     <?php include plugin_dir_path(__FILE__) . 'templates/role-selection-modal.php'; ?>
-    <div style="text-align: center;"> <!-- Přidání stylu pro vycentrování -->
-        <a href="<?php echo site_url('/ksefty'); ?>" class="button">Všechny akce</a> <!-- Přidání tlačítka pro přechod na "kšefty" -->
-    </div>
     <table id="kseft-overview-table">
         <thead>
             <tr>
