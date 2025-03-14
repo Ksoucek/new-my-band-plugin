@@ -73,20 +73,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             createGoogleCalendarEvent($kseft_id, $eventDetails);
         }
 
-        echo '<p>Kšeft byl úspěšně ' . ($kseft_id ? 'upraven' : 'vytvořen') . '.</p>';
+        echo '<p>Akce byla úspěšně ' . ($kseft_id ? 'upraven' : 'vytvořen') . '.</p>';
         echo '<script>window.location.href = "' . get_permalink($kseft_id) . '";</script>'; // Přesměrování na kartu kšeftu
     } else {
-        echo '<p>Došlo k chybě při ' . ($kseft_id ? 'úpravě' : 'vytváření') . ' kšeftu.</p>';
+        echo '<p>Došlo k chybě při ' . ($kseft_id ? 'úpravě' : 'vytváření') . ' Akce.</p>';
     }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['delete_kseft_id'])) {
     $delete_kseft_id = intval($_GET['delete_kseft_id']);
     if (wp_delete_post($delete_kseft_id)) {
-        echo '<p>Kšeft byl úspěšně smazán.</p>';
+        echo '<p>Akce byla úspěšně smazána.</p>';
         echo '<script>window.location.href = "' . site_url('/manage-kseft') . '";</script>'; // Přesměrování na stránku Manage Kseft
     } else {
-        echo '<p>Došlo k chybě při mazání kšeftu.</p>';
+        echo '<p>Došlo k chybě při mazání Akce.</p>';
     }
 }
 
@@ -129,7 +129,7 @@ if (!$kseft_id) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $kseft_id ? 'Upravit Kšeft' : 'Vytvořit Kšeft'; ?></title>
+    <title><?php echo $kseft_id ? 'Upravit Akci' : 'Vytvořit Akci'; ?></title>
     <?php wp_head(); ?>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <style>
@@ -212,17 +212,17 @@ if (!$kseft_id) {
 </head>
 <body>
     <div class="container">
-        <h1><?php echo $kseft_id ? 'Upravit Kšeft' : 'Vytvořit Kšeft'; ?></h1>
+        <h1><?php echo $kseft_id ? 'Upravit Akci' : 'Vytvořit Akci'; ?></h1>
         <form method="POST" id="manage-kseft-form">
             <input type="hidden" name="kseft_id" id="kseft_id" value="<?php echo esc_attr($kseft_id); ?>">
             <input type="hidden" name="google_calendar_event_id" value="<?php echo esc_attr($google_event_id); ?>">
             <div class="form-group-inline">
                 <div class="form-group">
-                    <label for="kseft_name">Název kšeftu:</label>
+                    <label for="kseft_name">Název Akce:</label>
                     <input type="text" name="kseft_name" id="kseft_name" value="<?php echo esc_attr($kseft_name); ?>" required>
                 </div>
                 <div class="form-group">
-                    <label for="kseft_status">Stav kšeftu:</label>
+                    <label for="kseft_status">Stav Akce:</label>
                     <select name="kseft_status" id="kseft_status">
                         <option value="Rezervace termínu" <?php selected($kseft_status, 'Rezervace termínu'); ?>>Rezervace termínu</option>
                         <option value="Podepsaná smlouva" <?php selected($kseft_status, 'Podepsaná smlouva'); ?>>Podepsaná smlouva</option>
@@ -231,7 +231,7 @@ if (!$kseft_id) {
             </div>
             <div class="form-group-inline">
                 <div class="form-group">
-                    <label for="kseft_event_date">Datum kšeftu:</label>
+                    <label for="kseft_event_date">Datum Akce:</label>
                     <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($kseft_event_date); ?>" required>
                 </div>
                 <div class="form-group">
@@ -281,10 +281,10 @@ if (!$kseft_id) {
             </div>
             <div id="map" style="width: 100%; height: 400px;"></div> <!-- Přidání ID "map" -->
             <div class="form-actions">
-                <button type="submit" class="button" id="submit-kseft"><?php echo $kseft_id ? 'Upravit Kšeft' : 'Vytvořit Kšeft'; ?></button>
-                <a href="<?php echo site_url('/ksefty'); ?>" class="button">Zpět na seznam kšeftů</a>
+                <button type="submit" class="button" id="submit-kseft"><?php echo $kseft_id ? 'Upravit akci' : 'Vytvořit akci'; ?></button>
+                <a href="<?php echo site_url('/ksefty'); ?>" class="button">Zpět na seznam Akcí</a>
                 <?php if ($kseft_id) : ?>
-                    <a href="<?php echo add_query_arg('delete_kseft_id', $kseft_id, site_url('/manage-kseft')); ?>" class="button delete" onclick="return confirm('Opravdu chcete smazat tento kšeft?');">Smazat Kšeft</a>
+                    <a href="<?php echo add_query_arg('delete_kseft_id', $kseft_id, site_url('/manage-kseft')); ?>" class="button delete" onclick="return confirm('Opravdu chcete smazat tuto akci?');">Smazat Akci</a>
                 <?php endif; ?>
                 <button type="button" class="button" id="add-transport-to-description">Přidat dopravu do popisu</button> <!-- Přidání tlačítka pro přidání dopravy do popisu -->
             </div>

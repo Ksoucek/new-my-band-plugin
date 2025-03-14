@@ -45,7 +45,7 @@ function my_team_plugin_create_kseft() {
     ));
 
     if (is_wp_error($kseft_id)) { // Kontrola, zda došlo k chybě
-        wp_send_json_error(array('message' => 'Chyba při vytváření kšeftu.')); // Odeslání chybové zprávy
+        wp_send_json_error(array('message' => 'Chyba při vytváření Akce.')); // Odeslání chybové zprávy
     } else {
         wp_send_json_success(array('kseft_id' => $kseft_id, 'redirect_url' => get_permalink($kseft_id))); // Odeslání úspěšné zprávy s ID kšeftu a URL pro přesměrování
     }
@@ -247,9 +247,9 @@ function my_team_plugin_display_ksefty() {
     $ksefty = new WP_Query($args); // Dotaz na příspěvky
     error_log('Query executed: ' . print_r($args, true)); // Logování dotazu
     $output = '<div class="business-overview" style="text-align: center;">'; // Přidání stylu pro vycentrování
-    $output .= '<a href="' . site_url('/moje-ksefty') . '" class="button">Moje kšefty</a>'; // Přidání tlačítka pro přechod na "moje kšefty"
-    $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>'; // Přesunutí tlačítka nahoru
-    $output .= '<form method="GET" action=""><label><input type="checkbox" name="show_all" value="1" ' . ($show_all ? 'checked' : '') . '> Zobrazit všechny kšefty</label><button type="submit" class="button">Filtrovat</button></form>'; // Přidání zaškrtávacího políčka pro zobrazení všech kšeftů
+    $output .= '<a href="' . site_url('/moje-ksefty') . '" class="button">Moje Akce</a>'; // Přidání tlačítka pro přechod na "moje kšefty"
+    $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit novou Akci</a>'; // Přesunutí tlačítka nahoru
+    $output .= '<form method="GET" action=""><label><input type="checkbox" name="show_all" value="1" ' . ($show_all ? 'checked' : '') . '> Zobrazit všechny akce</label><button type="submit" class="button">Filtrovat</button></form>'; // Přidání zaškrtávacího políčka pro zobrazení všech kšeftů
     if ($ksefty->have_posts()) {
         $output .= '<table>';
         $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></thead>';
@@ -304,7 +304,7 @@ function my_team_plugin_display_ksefty() {
         $output .= '</table>';
         wp_reset_postdata(); // Resetování dotazu
     } else {
-        $output .= '<p>Žádné kšefty nejsou k dispozici.</p>'; // Zobrazení zprávy, pokud nejsou žádné kšefty
+        $output .= '<p>Žádné akce nejsou k dispozici.</p>'; // Zobrazení zprávy, pokud nejsou žádné kšefty
     }
     $output .= '</div>';
     error_log('Output: ' . $output); // Logování výstupu
@@ -338,9 +338,9 @@ function my_team_plugin_display_moje_ksefty() {
     $ksefty = new WP_Query($args); // Dotaz na příspěvky
     error_log('Query executed: ' . print_r($args, true)); // Logování dotazu
     $output = '<div class="business-overview" style="text-align: center;">'; // Přidání stylu pro vycentrování
-    $output .= '<a href="' . site_url('/moje-ksefty') . '" class="button">Moje kšefty</a>'; // Přidání tlačítka pro přechod na "moje kšefty"
-    $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit nový kšeft</a>'; // Přesunutí tlačítka nahoru
-    $output .= '<form method="GET" action=""><label><input type="checkbox" name="show_all" value="1" ' . ($show_all ? 'checked' : '') . '> Zobrazit všechny kšefty</label><button type="submit" class="button">Filtrovat</button></form>'; // Přidání zaškrtávacího políčka pro zobrazení všech kšeftů
+    $output .= '<a href="' . site_url('/moje-ksefty') . '" class="button">Moje akce</a>'; // Přidání tlačítka pro přechod na "moje kšefty"
+    $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit novou akci</a>'; // Přesunutí tlačítka nahoru
+    $output .= '<form method="GET" action=""><label><input type="checkbox" name="show_all" value="1" ' . ($show_all ? 'checked' : '') . '> Zobrazit všechny Akce</label><button type="submit" class="button">Filtrovat</button></form>'; // Přidání zaškrtávacího políčka pro zobrazení všech kšeftů
     if ($ksefty->have_posts()) {
         $output .= '<table>';
         $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></thead>';
@@ -395,7 +395,7 @@ function my_team_plugin_display_moje_ksefty() {
         $output .= '</table>';
         wp_reset_postdata(); // Resetování dotazu
     } else {
-        $output .= '<p>Žádné kšefty nejsou k dispozici.</p>'; // Zobrazení zprávy, pokud nejsou žádné kšefty
+        $output .= '<p>Žádné Akce nejsou k dispozici.</p>'; // Zobrazení zprávy, pokud nejsou žádné kšefty
     }
     $output .= '</div>';
     error_log('Output: ' . $output); // Logování výstupu
@@ -426,7 +426,7 @@ function my_team_plugin_render_meta_box($post) {
     <br><br>
     <div style="display: flex; justify-content: space_between;">
         <div style="flex: 1; margin-right: 10px;">
-            <label for="kseft_event_date">Datum kšeftu:</label>
+            <label for="kseft_event_date">Datum Akce:</label>
             <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($event_date); ?>" size="25" /> <!-- Pole pro datum kšeftu -->
         </div>
         <div style="flex: 1; margin-right: 10px;">
@@ -439,7 +439,7 @@ function my_team_plugin_render_meta_box($post) {
         </div>
     </div>
     <br><br>
-    <label for="kseft_status">Stav kšeftu:</label>
+    <label for="kseft_status">Stav Akce:</label>
     <select name="kseft_status" id="kseft_status">
         <option value="Rezervace termínu" <?php selected($status, 'Rezervace termínu'); ?>>Rezervace termínu</option>
         <option value="Podepsaná smlouva" <?php selected($status, 'Podepsaná smlouva'); ?>>Podepsaná smlouva</option>
@@ -541,15 +541,15 @@ function my_team_plugin_display_kseft_details($content) {
         $next_kseft = my_team_plugin_get_adjacent_kseft($event_date, 'next'); // Získání dalšího kšeftu
         $custom_content = '<div class="kseft-navigation" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">';
         if ($prev_kseft) {
-            $custom_content .= '<a href="' . get_permalink($prev_kseft->ID) . '" class="button" style="flex: 1; text-align: left;">Předchozí kšeft</a>'; // Tlačítko pro předchozí kšeft
+            $custom_content .= '<a href="' . get_permalink($prev_kseft->ID) . '" class="button" style="flex: 1; text-align: left;">Předchozí Akce</a>'; // Tlačítko pro předchozí kšeft
         } else {
             $custom_content .= '<span style="flex: 1;"></span>';
         }
         $current_role_id = isset($_COOKIE['selectedRoleId']) ? intval($_COOKIE['selectedRoleId']) : 0; // Získání aktuální role z cookie
         $back_link = $current_role_id ? site_url('/moje-ksefty') : site_url('/ksefty'); // Odkaz zpět na přehled kšeftů
-        $custom_content .= '<a href="' . $back_link . '" class="button" style="flex: 1; text-align: center;">Zpět na přehled kšeftů</a>'; // Tlačítko zpět na přehled kšeftů
+        $custom_content .= '<a href="' . $back_link . '" class="button" style="flex: 1; text-align: center;">Zpět na přehled akcí</a>'; // Tlačítko zpět na přehled kšeftů
         if ($next_kseft) {
-            $custom_content .= '<a href="' . get_permalink($next_kseft->ID) . '" class="button" style="flex: 1; text-align: right;">Další kšeft</a>'; // Tlačítko pro další kšeft
+            $custom_content .= '<a href="' . get_permalink($next_kseft->ID) . '" class="button" style="flex: 1; text-align: right;">Další Akce</a>'; // Tlačítko pro další kšeft
         } else {
             $custom_content .= '<span style="flex: 1;"></span>';
         }
@@ -557,16 +557,16 @@ function my_team_plugin_display_kseft_details($content) {
 
         // Přidání tlačítek pro úpravu kšeftu a přidání do Google Kalendáře, pokud nepřicházíte ze stránky "moje-ksefty"
         if (!isset($_GET['from']) || $_GET['from'] !== 'moje-ksefty') {
-            $custom_content .= '<a href="' . add_query_arg('kseft_id', $kseft_id, site_url('/manage-kseft')) . '" class="button">Upravit Kšeft</a>'; // Tlačítko pro úpravu kšeftu
+            $custom_content .= '<a href="' . add_query_arg('kseft_id', $kseft_id, site_url('/manage-kseft')) . '" class="button">Upravit Akci</a>'; // Tlačítko pro úpravu kšeftu
             $custom_content .= '<button id="add-to-calendar-button" class="button">Přidat do Google Kalendáře</button>'; // Tlačítko pro přidání do Google Kalendáře
         }
 
-        $custom_content .= '<h3>Detaily Kšeftu</h3>';
-        $custom_content .= '<p><strong>ID Kšeftu:</strong> ' . esc_html($kseft_id) . '</p>'; // Zobrazení ID kšeftu
+        $custom_content .= '<h3>Detaily Akce</h3>';
+        // $custom_content .= '<p><strong>ID Kšeftu:</strong> ' . esc_html($kseft_id) . '</p>'; // Zobrazení ID kšeftu
         $custom_content .= '<input type="hidden" id="kseft_id" value="' . esc_attr($kseft_id) . '">'; // Skryté pole pro kseft_id
         $custom_content .= '<p><strong>Lokace:</strong> ' . esc_html($location) . '</p>'; // Zobrazení lokace
         $formatted_date = date_i18n('D d.m.Y', strtotime($event_date)); // Formátování data
-        $custom_content .= '<p><strong>Datum kšeftu:</strong> ' . esc_html($formatted_date) . '</p>'; // Zobrazení data kšeftu
+        $custom_content .= '<p><strong>Datum Akce:</strong> ' . esc_html($formatted_date) . '</p>'; // Zobrazení data kšeftu
         $custom_content .= '<p><strong>Čas srazu:</strong> ' . esc_html($meeting_time) . '</p>'; // Zobrazení času srazu
         $custom_content .= '<p><strong>Začátek vystoupení:</strong> ' . esc_html($performance_start) . '</p>'; // Zobrazení začátku vystoupení
         $custom_content .= '<p><strong>Konec vystoupení:</strong> ' . esc_html($performance_end) . '</p>'; // Zobrazení konce vystoupení
@@ -1140,7 +1140,7 @@ add_action('admin_menu', 'my_team_plugin_add_kseft_overview_page'); // Přidán�
 function my_team_plugin_render_kseft_overview_page() {
     ?>
     <div class="wrap">
-        <h1>Přehled Kšeftů</h1>
+        <h1>Přehled Akcí</h1>
         <?php echo do_shortcode('[kseft_overview]'); ?>
     </div>
     <?php
@@ -1152,7 +1152,7 @@ function my_team_plugin_kseft_overview_shortcode() {
     <div id="selected-role-display" style="margin-bottom: 20px; font-weight: bold; cursor: pointer;"></div>
     <?php include plugin_dir_path(__FILE__) . 'templates/role-selection-modal.php'; ?>
     <div style="text-align: center;"> <!-- Přidání stylu pro vycentrování -->
-        <a href="<?php echo site_url('/ksefty'); ?>" class="button">Všechny kšefty</a> <!-- Přidání tlačítka pro přechod na "kšefty" -->
+        <a href="<?php echo site_url('/ksefty'); ?>" class="button">Všechny akce</a> <!-- Přidání tlačítka pro přechod na "kšefty" -->
     </div>
     <table id="kseft-overview-table">
         <thead>
@@ -1198,17 +1198,16 @@ function my_team_plugin_kseft_overview_shortcode() {
             } else {
                 ?>
                 <tr>
-                    <td colspan="5">Žádné kšefty nejsou k dispozici.</td> <!-- Zobrazení zprávy, pokud nejsou žádné kšefty -->
+                    <td colspan="5">Žádné akce nejsou k dispozici.</td>
                 </tr>
                 <?php
             }
             ?>
         </tbody>
     </table>
-
     <?php include plugin_dir_path(__FILE__) . 'templates/role-confirmation-modal.php'; ?>
-
     <?php
+    // ...existing code...
     return ob_get_clean();
 }
 add_shortcode('kseft_overview', 'my_team_plugin_kseft_overview_shortcode'); // Přidání shortcode pro přehled kšeftů
