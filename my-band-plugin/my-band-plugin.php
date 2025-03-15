@@ -492,48 +492,6 @@ function my_team_plugin_save_meta_box_data($post_id) {
 }
 add_action('save_post', 'my_team_plugin_save_meta_box_data'); // Přidání akce pro uložení metaboxů
 
-function my_team_plugin_add_kseft_meta_boxes() {
-    add_meta_box('kseft_obsazeni_template', 'Šablona obsazení', 'my_team_plugin_render_kseft_obsazeni_template_meta_box', 'kseft', 'side', 'default'); // Přidání metaboxu pro šablonu obsazení
-    add_meta_box('kseft_clothing', 'Oblečení', 'my_team_plugin_render_kseft_clothing_meta_box', 'kseft', 'side', 'default'); // Přidání metaboxu pro oblečení
-}
-add_action('add_meta_boxes', 'my_team_plugin_add_kseft_meta_boxes'); // Přidání akce pro přidání metaboxů
-
-function my_team_plugin_render_kseft_obsazeni_template_meta_box($post) {
-    $selected_template = get_post_meta($post->ID, 'kseft_obsazeni_template', true); // Získání vybrané šablony
-    $templates = get_posts(array('post_type' => 'obsazeni_template', 'numberposts' => -1)); // Získání všech šablon
-    ?>
-    <label for="kseft_obsazeni_template">Vyberte šablonu obsazení:</label>
-    <select name="kseft_obsazeni_template" id="kseft_obsazeni_template">
-        <option value="">-- Vyberte šablonu --</option>
-        <?php foreach ($templates as $template) : ?>
-            <option value="<?php echo $template->ID; ?>" <?php selected($selected_template, $template->ID); ?>><?php echo $template->post_title; ?></option>
-        <?php endforeach; ?>
-    </select> <!-- Výběr pro šablonu obsazení -->
-    <?php
-}
-
-function my_team_plugin_render_kseft_clothing_meta_box($post) {
-    $selected_clothing = get_post_meta($post->ID, 'kseft_clothing', true); // Získání vybraného oblečení
-    ?>
-    <label for="kseft_clothing">Vyberte oblečení:</label>
-    <select name="kseft_clothing" id="kseft_clothing">
-        <option value="krojová košile" <?php selected($selected_clothing, 'krojová košile'); ?>>Krojová košile</option>
-        <option value="společenská košile" <?php selected($selected_clothing, 'společenská košile'); ?>>Společenská košile</option>
-        <option value="Tmavý civil" <?php selected($selected_clothing, 'Tmavý civil'); ?>>Tmavý civil</option>
-    </select> <!-- Výběr pro oblečení -->
-    <?php
-}
-
-function my_team_plugin_save_kseft_meta_box_data($post_id) {
-    if (array_key_exists('kseft_obsazeni_template', $_POST)) {
-        update_post_meta($post_id, 'kseft_obsazeni_template', sanitize_text_field($_POST['kseft_obsazeni_template'])); // Uložení šablony obsazení
-    }
-    if (array_key_exists('kseft_clothing', $_POST)) {
-        update_post_meta($post_id, 'kseft_clothing', sanitize_text_field($_POST['kseft_clothing'])); // Uložení oblečení
-    }
-}
-add_action('save_post', 'my_team_plugin_save_kseft_meta_box_data'); // Přidání akce pro uložení metaboxů
-
 function my_team_plugin_display_kseft_details($content) {
     if (is_singular('kseft')) {
         $kseft_id = get_the_ID(); // Získání ID kšeftu
@@ -1305,6 +1263,9 @@ function my_team_plugin_log_error($message) {
 
 function my_team_plugin_check_password() {
     if (is_page('ksefty') && !is_user_logged_in()) {
+        if (isset($_COOKIE['manageKseftAccess']) && $_COOKIE['manageKseftAccess'] === md5(get_option('my_team_plugin_manage_kseft_password', 'heslo123'))) {
+            return; // Pokud je cookie nastavena, nevyžadovat heslo znovu
+        }
         $password = get_option('my_team_plugin_manage_kseft_password', 'heslo123');
         if (!isset($_POST['manage_kseft_password']) || $_POST['manage_kseft_password'] !== $password) {
             if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['manage_kseft_password'])) {
@@ -1372,8 +1333,21 @@ function my_team_plugin_check_password() {
             </html>
             <?php
             exit;
+        } else {
+            setcookie('manageKseftAccess', md5($password), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
         }
     } elseif (is_page('moje-ksefty') && !is_user_logged_in()) {
+        // Nová část: pokud již byla role odeslána, proveď okamžitý redirect před výstupem
+        if (isset($_POST['selected_role_id'])) {
+            $selected_role_id = intval($_POST['selected_role_id']);
+            setcookie('selectedRoleId', $selected_role_id, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+            wp_redirect(site_url('/moje-ksefty'));
+            exit;
+        }
+        // Pokud cookie již existuje, nic neprovádíme
+        if (isset($_COOKIE['selectedRoleId'])) {
+            return; // Pokud je role již vybrána, nevyžadovat heslo znovu
+        }
         $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
         $role_passwords = array();
         foreach ($roles as $role) {
@@ -1381,7 +1355,7 @@ function my_team_plugin_check_password() {
         }
         $valid_password = false;
         $matching_roles = array();
-        if (isset($_POST['role_password'])) {
+        if (isset($_POST['role_password']) && !empty($_POST['role_password'])) {
             foreach ($role_passwords as $role_id => $password) {
                 if ($_POST['role_password'] === $password) {
                     $valid_password = true;
@@ -1531,6 +1505,15 @@ function my_team_plugin_check_password() {
     }
 }
 add_action('template_redirect', 'my_team_plugin_check_password');
+
+function my_team_plugin_display_selected_role() {
+    if (isset($_COOKIE['selectedRoleId'])) {
+        $role_id = intval($_COOKIE['selectedRoleId']);
+        $role_title = get_the_title($role_id);
+        echo '<div id="selected-role-display">Zvolená role: ' . esc_html($role_title) . '</div>';
+    }
+}
+add_action('wp_footer', 'my_team_plugin_display_selected_role');
 
 // ...existing code...
 ?>
