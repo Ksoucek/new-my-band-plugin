@@ -188,10 +188,11 @@ function my_team_plugin_register_post_types() {
 }
 add_action('init', 'my_team_plugin_register_post_types'); // Přidání akce pro registraci typů příspěvků
 
-// Přidání metaboxu pro výchozího hráče a výchozí místo vyzvednutí při tvorbě role
+// Přidání metaboxu pro výchozího hráče, výchozí místo vyzvednutí a heslo role při tvorbě role
 function my_team_plugin_add_role_meta_boxes() {
     add_meta_box('role_default_player', 'Výchozí hráč', 'my_team_plugin_render_role_default_player_meta_box', 'role', 'normal', 'high'); // Přidání metaboxu pro výchozího hráče
     add_meta_box('role_default_pickup_location', 'Výchozí místo vyzvednutí', 'my_team_plugin_render_role_default_pickup_location_meta_box', 'role', 'normal', 'high'); // Přidání metaboxu pro výchozí místo vyzvednutí
+    add_meta_box('role_password', 'Heslo role', 'my_team_plugin_render_role_password_meta_box', 'role', 'normal', 'high'); // Přidání metaboxu pro heslo role
 }
 add_action('add_meta_boxes', 'my_team_plugin_add_role_meta_boxes'); // Přidání akce pro přidání metaboxů
 
@@ -211,12 +212,23 @@ function my_team_plugin_render_role_default_pickup_location_meta_box($post) {
     <?php
 }
 
+function my_team_plugin_render_role_password_meta_box($post) {
+    $role_password = get_post_meta($post->ID, 'role_password', true); // Získání hesla role
+    ?>
+    <label for="role_password">Heslo role:</label>
+    <input type="password" name="role_password" id="role_password" value="<?php echo esc_attr($role_password); ?>" size="25" /> <!-- Pole pro heslo role -->
+    <?php
+}
+
 function my_team_plugin_save_role_meta_box_data($post_id) {
     if (array_key_exists('role_default_player', $_POST)) {
         update_post_meta($post_id, 'role_default_player', sanitize_text_field($_POST['role_default_player'])); // Uložení výchozího hráče
     }
     if (array_key_exists('role_default_pickup_location', $_POST)) {
         update_post_meta($post_id, 'role_default_pickup_location', sanitize_text_field($_POST['role_default_pickup_location'])); // Uložení výchozího místa vyzvednutí
+    }
+    if (array_key_exists('role_password', $_POST)) {
+        update_post_meta($post_id, 'role_password', sanitize_text_field($_POST['role_password'])); // Uložení hesla role
     }
 }
 add_action('save_post', 'my_team_plugin_save_role_meta_box_data'); // Přidání akce pro uložení metaboxů
@@ -1288,4 +1300,237 @@ function my_team_plugin_log_error($message) {
     $timestamp = date('Y-m-d H:i:s'); // Získání aktuálního času
     error_log("[$timestamp] $message\n", 3, $log_file); // Zápis zprávy do log souboru
 }
+
+// ...existing code...
+
+function my_team_plugin_check_password() {
+    if (is_page('ksefty') && !is_user_logged_in()) {
+        $password = get_option('my_team_plugin_manage_kseft_password', 'heslo123');
+        if (!isset($_POST['manage_kseft_password']) || $_POST['manage_kseft_password'] !== $password) {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['manage_kseft_password'])) {
+                echo '<p style="color:red;">Přístup zamítnut. Nesprávné heslo.</p>';
+            }
+            ?>
+            <!DOCTYPE html>
+            <html lang="cs">
+            <head>
+                <meta charset="UTF-8">
+                <title>Přihlášení</title>
+                <style>
+                    body {
+                        background-color: #f0f0f0;
+                        font-family: Arial, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
+                    }
+                    .login-container {
+                        background: #fff;
+                        padding: 30px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        text-align: center;
+                    }
+                    .login-container h2 {
+                        margin-bottom: 20px;
+                        color: #0073aa;
+                    }
+                    .login-container input[type="password"] {
+                        width: 80%;
+                        padding: 10px;
+                        margin-bottom: 15px;
+                        border: 1px solid #ccc;
+                        border-radius: 4px;
+                        font-size: 16px;
+                    }
+                    .login-container input[type="submit"] {
+                        padding: 10px 20px;
+                        background-color: #0073aa;
+                        color: #fff;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    .login-container input[type="submit"]:hover {
+                        background-color: #005177;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="login-container">
+                    <h2>Prosím zadejte heslo</h2>
+                    <form method="post">
+                        <input type="password" name="manage_kseft_password" placeholder="Heslo">
+                        <br>
+                        <input type="submit" value="Přihlásit">
+                    </form>
+                </div>
+            </body>
+            </html>
+            <?php
+            exit;
+        }
+    } elseif (is_page('moje-ksefty') && !is_user_logged_in()) {
+        $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
+        $role_passwords = array();
+        foreach ($roles as $role) {
+            $role_passwords[$role->ID] = get_post_meta($role->ID, 'role_password', true);
+        }
+        $valid_password = false;
+        $matching_roles = array();
+        if (isset($_POST['role_password'])) {
+            foreach ($role_passwords as $role_id => $password) {
+                if ($_POST['role_password'] === $password) {
+                    $valid_password = true;
+                    $matching_roles[] = $role_id;
+                }
+            }
+        }
+        if (!$valid_password) {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role_password'])) {
+                echo '<p style="color:red;">Přístup zamítnut. Nesprávné heslo.</p>';
+            }
+            ?>
+            <!DOCTYPE html>
+            <html lang="cs">
+            <head>
+                <meta charset="UTF-8">
+                <title>Přihlášení</title>
+                <style>
+                    body {
+                        background-color: #f0f0f0;
+                        font-family: Arial, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
+                    }
+                    .login-container {
+                        background: #fff;
+                        padding: 30px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        text-align: center;
+                    }
+                    .login-container h2 {
+                        margin-bottom: 20px;
+                        color: #0073aa;
+                    }
+                    .login-container input[type="password"] {
+                        width: 80%;
+                        padding: 10px;
+                        margin-bottom: 15px;
+                        border: 1px solid #ccc;
+                        border-radius: 4px;
+                        font-size: 16px;
+                    }
+                    .login-container input[type="submit"] {
+                        padding: 10px 20px;
+                        background-color: #0073aa;
+                        color: #fff;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    .login-container input[type="submit"]:hover {
+                        background-color: #005177;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="login-container">
+                    <h2>Prosím zadejte heslo</h2>
+                    <form method="post">
+                        <input type="password" name="role_password" placeholder="Heslo">
+                        <br>
+                        <input type="submit" value="Přihlásit">
+                    </form>
+                </div>
+            </body>
+            </html>
+            <?php
+            exit;
+        } elseif (count($matching_roles) > 1) {
+            ?>
+            <!DOCTYPE html>
+            <html lang="cs">
+            <head>
+                <meta charset="UTF-8">
+                <title>Výběr role</title>
+                <style>
+                    body {
+                        background-color: #f0f0f0;
+                        font-family: Arial, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
+                    }
+                    .login-container {
+                        background: #fff;
+                        padding: 30px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        text-align: center;
+                    }
+                    .login-container h2 {
+                        margin-bottom: 20px;
+                        color: #0073aa;
+                    }
+                    .login-container select {
+                        width: 80%;
+                        padding: 10px;
+                        margin-bottom: 15px;
+                        border: 1px solid #ccc;
+                        border-radius: 4px;
+                        font-size: 16px;
+                    }
+                    .login-container input[type="submit"] {
+                        padding: 10px 20px;
+                        background-color: #0073aa;
+                        color: #fff;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    .login-container input[type="submit"]:hover {
+                        background-color: #005177;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="login-container">
+                    <h2>Vyberte roli</h2>
+                    <form method="post">
+                        <select name="selected_role_id">
+                            <?php foreach ($matching_roles as $role_id) : ?>
+                                <option value="<?php echo esc_attr($role_id); ?>"><?php echo get_the_title($role_id); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <br>
+                        <input type="submit" value="Přihlásit">
+                    </form>
+                </div>
+            </body>
+            </html>
+            <?php
+            exit;
+        } else {
+            $selected_role_id = $matching_roles[0];
+            setcookie('selectedRoleId', $selected_role_id, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+            wp_redirect(site_url('/moje-ksefty'));
+            exit;
+        }
+    }
+}
+add_action('template_redirect', 'my_team_plugin_check_password');
+
+// ...existing code...
 ?>
