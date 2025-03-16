@@ -1337,10 +1337,17 @@ function my_team_plugin_check_password() {
             setcookie('manageKseftAccess', md5($password), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
         }
     } elseif (is_page('moje-ksefty') && !is_user_logged_in()) {
+        // Pokud cookie existuje, ale je neplatná (např. "undefined"), vymažeme ji
+        if (isset($_COOKIE['selectedRoleId']) && ($_COOKIE['selectedRoleId'] === 'undefined' || !ctype_digit($_COOKIE['selectedRoleId']))) {
+            setcookie('selectedRoleId', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN);
+        }
         // Nová část: pokud již byla role odeslána, proveď okamžitý redirect před výstupem
         if (isset($_POST['selected_role_id'])) {
             $selected_role_id = intval($_POST['selected_role_id']);
+            $role = get_post($selected_role_id);
+            $role_title = $role ? $role->post_title : 'Neznámá role';
             setcookie('selectedRoleId', $selected_role_id, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+            setcookie('selectedRoleText', urlencode($role_title), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
             wp_redirect(site_url('/moje-ksefty'));
             exit;
         }
@@ -1485,7 +1492,7 @@ function my_team_plugin_check_password() {
                     <form method="post">
                         <select name="selected_role_id">
                             <?php foreach ($matching_roles as $role_id) : ?>
-                                <option value="<?php echo esc_attr($role_id); ?>"><?php echo get_the_title($role_id); ?></option>
+                                <option value="<?php echo esc_attr($role_id); ?>"><?php echo esc_html($role->post_title); ?></option>
                             <?php endforeach; ?>
                         </select>
                         <br>
@@ -1498,7 +1505,10 @@ function my_team_plugin_check_password() {
             exit;
         } else {
             $selected_role_id = $matching_roles[0];
+            $role = get_post($selected_role_id);
+            $role_title = $role ? $role->post_title : 'Neznámá role';
             setcookie('selectedRoleId', $selected_role_id, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+            setcookie('selectedRoleText', urlencode($role_title), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
             wp_redirect(site_url('/moje-ksefty'));
             exit;
         }
@@ -1509,7 +1519,7 @@ add_action('template_redirect', 'my_team_plugin_check_password');
 function my_team_plugin_display_selected_role() {
     if (isset($_COOKIE['selectedRoleId'])) {
         $role_id = intval($_COOKIE['selectedRoleId']);
-        $role_title = get_the_title($role_id);
+        $role_title = urldecode($_COOKIE['selectedRoleText']);
         echo '<div id="selected-role-display">Zvolená role: ' . esc_html($role_title) . '</div>';
     }
 }

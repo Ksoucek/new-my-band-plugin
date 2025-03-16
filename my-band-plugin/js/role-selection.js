@@ -13,9 +13,9 @@ jQuery(document).ready(function($) {
     }
 
     function setCurrentRole(roleId, roleText) {
-        $('#selected-role-display').text(`Zvolená role: ${roleText}`);
+        $('#selected-role-display').text(`Zvolená role: ${decodeURIComponent(roleText)}`);
         document.cookie = `selectedRoleId=${roleId}; path=/`;
-        document.cookie = `selectedRoleText=${roleText}; path=/`;
+        document.cookie = `selectedRoleText=${encodeURIComponent(roleText)}; path=/`;
         filterKseftByRole(roleId);
         updateConfirmButtonsForMyKsefty(); // Přidání volání updateConfirmButtonsForMyKsefty
     }
@@ -27,8 +27,8 @@ jQuery(document).ready(function($) {
             return acc;
         }, {});
         return {
-            roleId: cookies.selectedRoleId,
-            roleText: cookies.selectedRoleText
+            roleId: (cookies.selectedRoleId && cookies.selectedRoleId !== "undefined") ? cookies.selectedRoleId : null,
+            roleText: (cookies.selectedRoleText && cookies.selectedRoleText !== "undefined") ? decodeURIComponent(cookies.selectedRoleText) : null
         };
     }
 
