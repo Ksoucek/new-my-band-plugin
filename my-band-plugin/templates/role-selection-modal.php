@@ -7,8 +7,11 @@
                 <option value="">-- Vyberte roli --</option>
                 <?php
                 $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
+                $allowed_roles = isset($_COOKIE['allowedRoles']) ? explode(',', $_COOKIE['allowedRoles']) : array();
                 foreach ($roles as $role) {
-                    echo '<option value="' . esc_attr($role->ID) . '">' . esc_html($role->post_title) . '</option>';
+                    if (in_array($role->ID, $allowed_roles)) {
+                        echo '<option value="' . esc_attr($role->ID) . '">' . esc_html($role->post_title) . '</option>';
+                    }
                 }
                 ?>
             </select>

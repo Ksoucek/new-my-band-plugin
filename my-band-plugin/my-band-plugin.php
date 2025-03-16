@@ -391,7 +391,7 @@ function my_team_plugin_display_moje_ksefty() {
                 $obsazeni_class = 'obsazeno'; // Pokud jsou všechny role potvrzeny, nastaví se třída
                 $obsazeni_text = $has_substitute ? 'Obsazeno se záskokem' : 'Obsazeno'; // Pokud je záskok, nastaví se text
             } else {
-                $obsazeni_class = 'neobsazeno'; // Pokud nejsou všechny role potvrzeny, nastaví se třída
+                $obsazeni_class = 'neobsazeno'; // Pokud nejsou všechny role potvrzena, nastaví se třída
                 $obsazeni_text = 'Neobsazeno'; // Nastaví se text
             }
             $formatted_date = date_i18n('D d.m.Y', strtotime($event_date)); // Formátování data
@@ -691,6 +691,12 @@ function my_team_plugin_save_role_confirmation() {
     $role_status = sanitize_text_field($_POST['role_status']); // Sanitizace stavu role
     $role_substitute = sanitize_text_field($_POST['role_substitute']); // Sanitizace záskoku role
     $pickup_location = sanitize_text_field($_POST['pickup_location']); // Sanitizace místa vyzvednutí
+
+    // Kontrola, zda uživatel může potvrdit účast za tuto roli
+    if (!isset($_COOKIE['selectedRoleId']) || intval($_COOKIE['selectedRoleId']) !== $role_id) {
+        wp_send_json_error('Nemáte oprávnění potvrdit účast za tuto roli.');
+        wp_die();
+    }
 
     update_post_meta($post_id, 'role_status_' . $role_id, $role_status); // Uložení stavu role
     update_post_meta($post_id, 'role_substitute_' . $role_id, $role_substitute); // Uložení záskoku role
@@ -1437,6 +1443,8 @@ function my_team_plugin_check_password() {
             <?php
             exit;
         } elseif (count($matching_roles) > 1) {
+            // Přidáno: uložení cookie s povolenými rolemi
+            setcookie('allowedRoles', implode(',', $matching_roles), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
             ?>
             <!DOCTYPE html>
             <html lang="cs">
@@ -1492,7 +1500,7 @@ function my_team_plugin_check_password() {
                     <form method="post">
                         <select name="selected_role_id">
                             <?php foreach ($matching_roles as $role_id) : ?>
-                                <option value="<?php echo esc_attr($role_id); ?>"><?php echo esc_html($role->post_title); ?></option>
+                                <option value="<?php echo esc_attr($role_id); ?>"><?php echo esc_html(get_the_title($role_id)); ?></option>
                             <?php endforeach; ?>
                         </select>
                         <br>
@@ -1509,20 +1517,28 @@ function my_team_plugin_check_password() {
             $role_title = $role ? $role->post_title : 'Neznámá role';
             setcookie('selectedRoleId', $selected_role_id, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
             setcookie('selectedRoleText', urlencode($role_title), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+            setcookie('allowedRoles', implode(',', $matching_roles), time() + 3600, COOKIEPATH, COOKIE_DOMAIN); // Nastavení cookie allowedRoles
             wp_redirect(site_url('/moje-ksefty'));
             exit;
         }
     }
 }
 add_action('template_redirect', 'my_team_plugin_check_password');
+// ...existing code...
 
 function my_team_plugin_display_selected_role() {
     if (isset($_COOKIE['selectedRoleId'])) {
         $role_id = intval($_COOKIE['selectedRoleId']);
         $role_title = urldecode($_COOKIE['selectedRoleText']);
-        echo '<div id="selected-role-display">Zvolená role: ' . esc_html($role_title) . '</div>';
+        $allowed_roles = isset($_COOKIE['allowedRoles']) ? explode(',', $_COOKIE['allowedRoles']) : array();
+        echo '<div id="selected-role-display" style="cursor: pointer;">Zvolená role: ' . esc_html($role_title);
+        if (count($allowed_roles) > 1) {
+            echo ' (klikněte pro změnu)';
+        }
+        echo '</div>';
     }
 }
+// ...existing code...
 add_action('wp_footer', 'my_team_plugin_display_selected_role');
 
 // ...existing code...

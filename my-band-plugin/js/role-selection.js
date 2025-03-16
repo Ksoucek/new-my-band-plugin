@@ -244,6 +244,8 @@ jQuery(document).ready(function($) {
     });
 
     $('#selected-role-display').on('click', function() {
+        // Smažeme cookie s aktuálně vybranou rolí, aby bylo možné znovu vybrat z více rolí
+        document.cookie = "selectedRoleId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
         showRoleSelectionModal();
     });
 
