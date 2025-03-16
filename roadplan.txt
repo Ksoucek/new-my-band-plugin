@@ -1,3 +1,6 @@
-kopirovani kšeftu
 výchozí hodnota jdu na potvrzení učasti..
+kopirovani kšeftu
+výchozí adresa vyzvednutí
+pitný režim
+pokud je záskok tak ho vypsat do popisu zvlášť při vytvoření dopravy
 historie změn
