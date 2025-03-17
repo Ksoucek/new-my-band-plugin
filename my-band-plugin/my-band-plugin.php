@@ -893,7 +893,6 @@ function my_team_plugin_render_settings_page() {
     <?php
 }
 
-// ...existing code...
 function my_team_plugin_register_settings() {
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_google_maps_api_key'); // Registrace nastavení pro Google Maps API klíč
     register_setting('my_team_plugin_settings_group', 'my_team_plugin_openrouteservice_api_key'); // Registrace nastavení pro OpenRouteService API klíč
@@ -948,7 +947,7 @@ function my_team_plugin_register_settings() {
         'my_team_plugin_settings_section'
     );
 }
-add_action('admin_init', 'my_team_plugin_register_settings'); // ...existing code...
+add_action('admin_init', 'my_team_plugin_register_settings');
 
 function my_team_plugin_manage_kseft_password_callback() {
     $password = get_option('my_team_plugin_manage_kseft_password', 'heslo123');
@@ -956,7 +955,6 @@ function my_team_plugin_manage_kseft_password_callback() {
     <input type="text" name="my_team_plugin_manage_kseft_password" value="<?php echo esc_attr($password); ?>" size="50"> <!-- Pole pro heslo pro správu Kšeftů -->
     <?php
 }
-// ...existing code...
 
 function my_team_plugin_google_maps_api_key_callback() {
     $api_key = get_option('my_team_plugin_google_maps_api_key'); // Získání Google Maps API klíče
@@ -1198,7 +1196,6 @@ function my_team_plugin_kseft_overview_shortcode() {
     </table>
     <?php include plugin_dir_path(__FILE__) . 'templates/role-confirmation-modal.php'; ?>
     <?php
-    // ...existing code...
     return ob_get_clean();
 }
 add_shortcode('kseft_overview', 'my_team_plugin_kseft_overview_shortcode'); // Přidání shortcode pro přehled kšeftů
@@ -1265,7 +1262,6 @@ function my_team_plugin_log_error($message) {
     error_log("[$timestamp] $message\n", 3, $log_file); // Zápis zprávy do log souboru
 }
 
-// ...existing code...
 
 function my_team_plugin_check_password() {
     if (is_page('ksefty') && !is_user_logged_in()) {
@@ -1524,7 +1520,6 @@ function my_team_plugin_check_password() {
     }
 }
 add_action('template_redirect', 'my_team_plugin_check_password');
-// ...existing code...
 
 function my_team_plugin_display_selected_role() {
     if (isset($_COOKIE['selectedRoleId'])) {
@@ -1538,8 +1533,6 @@ function my_team_plugin_display_selected_role() {
         echo '</div>';
     }
 }
-// ...existing code...
 add_action('wp_footer', 'my_team_plugin_display_selected_role');
 
-// ...existing code...
 ?>
