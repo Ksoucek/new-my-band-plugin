@@ -559,6 +559,8 @@ function my_team_plugin_display_kseft_details($content) {
             $custom_content .= '<button id="add-to-calendar-button" class="button">Přidat do Google Kalendáře</button>'; // Tlačítko pro přidání do Google Kalendáře
         }
 
+        $custom_content .= '<a href="' . add_query_arg('copy_kseft_id', $kseft_id, site_url('/manage-kseft')) . '" class="button">Kopírovat Akci</a>'; // Tlačítko pro kopírování kšeftu
+
         $custom_content .= '<h3>Detaily Akce</h3>';
         // $custom_content .= '<p><strong>ID Kšeftu:</strong> ' . esc_html($kseft_id) . '</p>'; // Zobrazení ID kšeftu
         $custom_content .= '<input type="hidden" id="kseft_id" value="' . esc_attr($kseft_id) . '">'; // Skryté pole pro kseft_id
@@ -1582,6 +1584,57 @@ function my_team_plugin_display_selected_role() {
 }
 // ...existing code...
 add_action('wp_footer', 'my_team_plugin_display_selected_role');
+
+// ...existing code...
+
+function my_team_plugin_copy_kseft() {
+    if (!isset($_GET['copy_kseft_id'])) {
+        return;
+    }
+
+    $original_kseft_id = intval($_GET['copy_kseft_id']);
+    $original_kseft = get_post($original_kseft_id);
+
+    if (!$original_kseft || $original_kseft->post_type !== 'kseft') {
+        return;
+    }
+
+    $new_kseft_data = array(
+        'post_title' => $original_kseft->post_title . ' (Kopie)',
+        'post_type' => 'kseft',
+        'post_status' => 'draft'
+    );
+
+    $new_kseft_id = wp_insert_post($new_kseft_data);
+
+    if (is_wp_error($new_kseft_id)) {
+        wp_die('Chyba při kopírování kšeftu.');
+    }
+
+    $meta_keys = array(
+        'kseft_location',
+        'kseft_meeting_time',
+        'kseft_performance_start',
+        'kseft_performance_end',
+        'kseft_obsazeni_template',
+        'kseft_status',
+        'kseft_clothing',
+        'kseft_description',
+        'kseft_responsible_for_drinks'
+    );
+
+    foreach ($meta_keys as $meta_key) {
+        $meta_value = get_post_meta($original_kseft_id, $meta_key, true);
+        update_post_meta($new_kseft_id, $meta_key, $meta_value);
+    }
+
+    // Nastavení nového data kšeftu na dnešek
+    update_post_meta($new_kseft_id, 'kseft_event_date', date('Y-m-d'));
+
+    wp_redirect(add_query_arg(array('kseft_id' => $new_kseft_id), site_url('/manage-kseft')));
+    exit;
+}
+add_action('template_redirect', 'my_team_plugin_copy_kseft');
 
 // ...existing code...
 ?>

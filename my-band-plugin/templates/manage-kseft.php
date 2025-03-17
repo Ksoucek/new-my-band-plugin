@@ -179,19 +179,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['delete_kseft_id'])) {
 }
 
 $kseft_id = isset($_GET['kseft_id']) ? intval($_GET['kseft_id']) : 0;
-$kseft = $kseft_id ? get_post($kseft_id) : null;
-$kseft_name = $kseft ? $kseft->post_title : '';
-$kseft_location = $kseft ? get_post_meta($kseft_id, 'kseft_location', true) : '';
-$kseft_meeting_time = $kseft ? get_post_meta($kseft_id, 'kseft_meeting_time', true) : '';
-$kseft_event_date = $kseft ? get_post_meta($kseft_id, 'kseft_event_date', true) : '';
-$kseft_performance_start = $kseft ? get_post_meta($kseft_id, 'kseft_performance_start', true) : ''; // Načtení pole pro začátek vystoupení
-$kseft_performance_end = $kseft ? get_post_meta($kseft_id, 'kseft_performance_end', true) : ''; // Načtení pole pro konec vystoupení
-$kseft_obsazeni_template = $kseft ? get_post_meta($kseft_id, 'kseft_obsazeni_template', true) : '';
-$kseft_status = $kseft ? get_post_meta($kseft_id, 'kseft_status', true) : ''; // Načtení pole pro stav
-$kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : ''; // Načtení pole pro oblečení
-$google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true); // Přidání proměnné $google_event_id
-$kseft_description = $kseft ? get_post_meta($kseft_id, 'kseft_description', true) : ''; // Načtení pole pro popis
-$kseft_responsible_for_drinks = $kseft ? get_post_meta($kseft_id, 'kseft_responsible_for_drinks', true) : ''; // Načtení pole pro odpovědného za pitný režim
+$copy_kseft_id = isset($_GET['copy_kseft_id']) ? intval($_GET['copy_kseft_id']) : 0;
+
+if ($copy_kseft_id) {
+    $kseft = get_post($copy_kseft_id);
+    if ($kseft && $kseft->post_type === 'kseft') {
+        $kseft_location = get_post_meta($copy_kseft_id, 'kseft_location', true);
+        $kseft_meeting_time = get_post_meta($copy_kseft_id, 'kseft_meeting_time', true);
+        $kseft_event_date = date('Y-m-d'); // Nastavení data na dnešek
+        $kseft_performance_start = get_post_meta($copy_kseft_id, 'kseft_performance_start', true);
+        $kseft_performance_end = get_post_meta($copy_kseft_id, 'kseft_performance_end', true);
+        $kseft_status = get_post_meta($copy_kseft_id, 'kseft_status', true);
+        $kseft_clothing = get_post_meta($copy_kseft_id, 'kseft_clothing', true);
+        $kseft_description = get_post_meta($copy_kseft_id, 'kseft_description', true);
+        $kseft_responsible_for_drinks = get_post_meta($copy_kseft_id, 'kseft_responsible_for_drinks', true);
+        $kseft_obsazeni_template = get_post_meta($copy_kseft_id, 'kseft_obsazeni_template', true);
+        $kseft_id = ''; // Nastavení ID na 0, aby se vytvořil nový kšeft
+    }
+} else {
+    $kseft = $kseft_id ? get_post($kseft_id) : null;
+    $kseft_name = $kseft ? $kseft->post_title : '';
+    $kseft_location = $kseft ? get_post_meta($kseft_id, 'kseft_location', true) : '';
+    $kseft_meeting_time = $kseft ? get_post_meta($kseft_id, 'kseft_meeting_time', true) : '';
+    $kseft_event_date = $kseft ? get_post_meta($kseft_id, 'kseft_event_date', true) : '';
+    $kseft_performance_start = $kseft ? get_post_meta($kseft_id, 'kseft_performance_start', true) : '';
+    $kseft_performance_end = $kseft ? get_post_meta($kseft_id, 'kseft_performance_end', true) : '';
+    $kseft_obsazeni_template = $kseft ? get_post_meta($kseft_id, 'kseft_obsazeni_template', true) : '';
+    $kseft_status = $kseft ? get_post_meta($kseft_id, 'kseft_status', true) : '';
+    $kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : '';
+    $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true);
+    $kseft_description = $kseft ? get_post_meta($kseft_id, 'kseft_description', true) : '';
+    $kseft_responsible_for_drinks = $kseft ? get_post_meta($kseft_id, 'kseft_responsible_for_drinks', true) : '';
+}
 
 $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
 $unique_players = array();
@@ -386,9 +405,9 @@ if (!$kseft_id) {
             </div>
             <div id="map" style="width: 100%; height: 400px;"></div> <!-- Přidání ID "map" -->
             <div class="form-actions">
-                <button type="submit" class="button" id="submit-kseft"><?php echo $kseft_id ? 'Upravit akci' : 'Vytvořit akci'; ?></button>
+                <button type="submit" class="button" id="submit-kseft"><?php echo ($kseft_id && !$copy_kseft_id) ? 'Upravit akci' : 'Vytvořit akci'; ?></button>
                 <a href="<?php echo site_url('/ksefty'); ?>" class="button">Zpět na seznam Akcí</a>
-                <?php if ($kseft_id) : ?>
+                <?php if ($kseft_id && !$copy_kseft_id) : ?>
                     <a href="<?php echo add_query_arg('delete_kseft_id', $kseft_id, site_url('/manage-kseft')); ?>" class="button delete" onclick="return confirm('Opravdu chcete smazat tuto akci?');">Smazat Akci</a>
                 <?php endif; ?>
                 <button type="button" class="button" id="add-transport-to-description">Přidat dopravu do popisu</button> <!-- Přidání tlačítka pro přidání dopravy do popisu -->
@@ -493,6 +512,10 @@ if (!$kseft_id) {
 
             $('#submit-kseft').on('click', function(e) {
                 e.preventDefault();
+                var kseftId = $('#kseft_id').val();
+                if (kseftId == 0) {
+                    $('#submit-kseft').text('Vytvořit akci');
+                }
                 $('#manage-kseft-form').submit();
                 $('#update-google-event').click();
             });
