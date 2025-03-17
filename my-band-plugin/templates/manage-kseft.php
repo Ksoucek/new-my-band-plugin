@@ -99,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kseft_status = sanitize_text_field($_POST['kseft_status']); // Přidání pole pro stav
     $kseft_clothing = sanitize_text_field($_POST['kseft_clothing']); // Přidání pole pro oblečení
     $kseft_description = sanitize_textarea_field($_POST['kseft_description']); // Přidání pole pro popis
+    $kseft_responsible_for_drinks = sanitize_text_field($_POST['kseft_responsible_for_drinks']); // Přidání pole pro odpovědného za pitný režim
 
     $kseft_data = array(
         'post_title' => $kseft_name,
@@ -123,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         update_post_meta($kseft_id, 'kseft_status', $kseft_status); // Uložení pole pro stav
         update_post_meta($kseft_id, 'kseft_clothing', $kseft_clothing); // Uložení pole pro oblečení
         update_post_meta($kseft_id, 'kseft_description', $kseft_description); // Uložení pole pro popis
+        update_post_meta($kseft_id, 'kseft_responsible_for_drinks', $kseft_responsible_for_drinks); // Uložení pole pro odpovědného za pitný režim
 
         $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
         foreach ($roles as $role) {
@@ -189,8 +191,17 @@ $kseft_status = $kseft ? get_post_meta($kseft_id, 'kseft_status', true) : ''; //
 $kseft_clothing = $kseft ? get_post_meta($kseft_id, 'kseft_clothing', true) : ''; // Načtení pole pro oblečení
 $google_event_id = get_post_meta($kseft_id, 'google_calendar_event_id', true); // Přidání proměnné $google_event_id
 $kseft_description = $kseft ? get_post_meta($kseft_id, 'kseft_description', true) : ''; // Načtení pole pro popis
+$kseft_responsible_for_drinks = $kseft ? get_post_meta($kseft_id, 'kseft_responsible_for_drinks', true) : ''; // Načtení pole pro odpovědného za pitný režim
 
 $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
+$unique_players = array();
+foreach ($roles as $role) {
+    $default_player = get_post_meta($role->ID, 'role_default_player', true);
+    if (!in_array($default_player, $unique_players)) {
+        $unique_players[] = $default_player;
+    }
+}
+
 $meta = get_post_meta($kseft_id);
 foreach ($roles as $role) {
     $role_id = $role->ID;
@@ -364,6 +375,14 @@ if (!$kseft_id) {
             <div class="form-group">
                 <label for="kseft_description">Popis <span title="Poznámky - např. doprava, instrukce atd.">(?)</span>:</label>
                 <textarea name="kseft_description" id="kseft_description" rows="4"><?php echo esc_textarea($kseft_description); ?></textarea>
+            </div>
+            <div class="form-group">
+                <label for="kseft_responsible_for_drinks">Odpovědný za pitný režim:</label>
+                <select name="kseft_responsible_for_drinks" id="kseft_responsible_for_drinks">
+                    <?php foreach ($unique_players as $player) : ?>
+                        <option value="<?php echo esc_attr($player); ?>" <?php selected($kseft_responsible_for_drinks, $player); ?>><?php echo esc_html($player); ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
             <div id="map" style="width: 100%; height: 400px;"></div> <!-- Přidání ID "map" -->
             <div class="form-actions">
