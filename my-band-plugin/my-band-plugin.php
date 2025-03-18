@@ -428,6 +428,8 @@ function my_team_plugin_render_meta_box($post) {
     $performance_end = get_post_meta($post->ID, 'kseft_performance_end', true); // Získání konce vystoupení
     $status = get_post_meta($post->ID, 'kseft_status', true); // Získání stavu
     $clothing = get_post_meta($post->ID, 'kseft_clothing', true); // Získání oblečení
+    $responsible_for_drinks = get_post_meta($post->ID, 'kseft_responsible_for_drinks', true); // Získání odpovědného za pitný režim
+    $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1)); // Získání všech rolí
     ?>
     <label for="kseft_location">Lokace (Google Maps URL):</label>
     <input type="text" name="kseft_location" id="kseft_location_wp" value="<?php echo esc_attr($location); ?>" size="25" /> <!-- Pole pro lokaci -->
@@ -464,6 +466,14 @@ function my_team_plugin_render_meta_box($post) {
         <option value="Tmavý civil" <?php selected($clothing, 'Tmavý civil'); ?>>Tmavý civil</option>
     </select> <!-- Výběr pro oblečení -->
     <br><br>
+    <label for="kseft_responsible_for_drinks">Odpovědný za pitný režim:</label>
+    <select name="kseft_responsible_for_drinks" id="kseft_responsible_for_drinks">
+        <?php foreach ($roles as $role) : ?>
+            <?php $default_player = get_post_meta($role->ID, 'role_default_player', true); ?>
+            <option value="<?php echo esc_attr($default_player); ?>" <?php selected($responsible_for_drinks, $default_player); ?>><?php echo esc_html($default_player); ?></option>
+        <?php endforeach; ?>
+    </select> <!-- Výběr pro odpovědného za pitný režim -->
+    <br><br>
     <?php
 }
 
@@ -489,6 +499,9 @@ function my_team_plugin_save_meta_box_data($post_id) {
     if (array_key_exists('kseft_clothing', $_POST)) {
         update_post_meta($post_id, 'kseft_clothing', sanitize_text_field($_POST['kseft_clothing'])); // Uložení oblečení
     }
+    if (array_key_exists('kseft_responsible_for_drinks', $_POST)) {
+        update_post_meta($post_id, 'kseft_responsible_for_drinks', sanitize_text_field($_POST['kseft_responsible_for_drinks'])); // Uložení odpovědného za pitný režim
+    }
 }
 add_action('save_post', 'my_team_plugin_save_meta_box_data'); // Přidání akce pro uložení metaboxů
 
@@ -503,8 +516,23 @@ function my_team_plugin_display_kseft_details($content) {
         $status = get_post_meta($kseft_id, 'kseft_status', true); // Získání stavu
         $clothing = get_post_meta($kseft_id, 'kseft_clothing', true); // Získání oblečení
         $description = get_post_meta($kseft_id, 'kseft_description', true); // Získání popisu
+        $responsible_for_drinks = get_post_meta($kseft_id, 'kseft_responsible_for_drinks', true); // Získání odpovědného za pitný režim
         $obsazeni_template_id = get_post_meta($kseft_id, 'kseft_obsazeni_template', true); // Získání ID šablony obsazení
         $obsazeni_template = get_post($obsazeni_template_id); // Získání šablony obsazení
+
+        // Získání počtu kšeftů, které mají aktuálně zvolenou osobu odpovědnou za pitný režim
+        $args = array(
+            'post_type' => 'kseft',
+            'meta_query' => array(
+                array(
+                    'key' => 'kseft_responsible_for_drinks',
+                    'value' => $responsible_for_drinks,
+                    'compare' => '='
+                )
+            )
+        );
+        $ksefty_query = new WP_Query($args);
+        $ksefty_count = $ksefty_query->found_posts;
 
         // Přidání tlačítek pro přechod na další nebo předchozí kšeft
         $prev_kseft = my_team_plugin_get_adjacent_kseft($event_date, 'prev'); // Získání předchozího kšeftu
@@ -531,6 +559,8 @@ function my_team_plugin_display_kseft_details($content) {
             $custom_content .= '<button id="add-to-calendar-button" class="button">Přidat do Google Kalendáře</button>'; // Tlačítko pro přidání do Google Kalendáře
         }
 
+        $custom_content .= '<a href="' . add_query_arg('copy_kseft_id', $kseft_id, site_url('/manage-kseft')) . '" class="button">Kopírovat Akci</a>'; // Tlačítko pro kopírování kšeftu
+
         $custom_content .= '<h3>Detaily Akce</h3>';
         // $custom_content .= '<p><strong>ID Kšeftu:</strong> ' . esc_html($kseft_id) . '</p>'; // Zobrazení ID kšeftu
         $custom_content .= '<input type="hidden" id="kseft_id" value="' . esc_attr($kseft_id) . '">'; // Skryté pole pro kseft_id
@@ -542,6 +572,7 @@ function my_team_plugin_display_kseft_details($content) {
         $custom_content .= '<p><strong>Konec vystoupení:</strong> ' . esc_html($performance_end) . '</p>'; // Zobrazení konce vystoupení
         $custom_content .= '<p><strong>Status:</strong> ' . esc_html($status) . '</p>'; // Zobrazení stavu
         $custom_content .= '<p><strong>Oblečení:</strong> ' . esc_html($clothing) . '</p>'; // Zobrazení oblečení
+        $custom_content .= '<p><strong>Odpovědný za pitný režim:</strong> ' . esc_html($responsible_for_drinks) . ' (' . $ksefty_count . ' kšeftů)</p>'; // Zobrazení odpovědného za pitný režim s počtem kšeftů
         $custom_content .= '<p><strong>Popis:</strong> ' . wpautop($description) . '</p>'; // Zobrazení popisu s HTML úpravami
         if ($obsazeni_template) {
             $custom_content .= '<h4>Obsazení:</h4>';
@@ -800,6 +831,8 @@ function my_team_plugin_render_kseft_details_meta_box($post) {
     $location = get_post_meta($post->ID, 'kseft_location', true); // Získání lokace
     $meeting_time = get_post_meta($post->ID, 'kseft_meeting_time', true); // Získání času srazu
     $event_date = get_post_meta($post->ID, 'kseft_event_date', true); // Získání data události
+    $responsible_for_drinks = get_post_meta($post->ID, 'kseft_responsible_for_drinks', true); // Získání odpovědného za pitný režim
+    $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1)); // Získání všech rolí
     ?>
     <label for="kseft_location">Lokace (Google Maps URL):</label>
     <input type="text" name="kseft_location" id="kseft_location" value="<?php echo esc_attr($location); ?>" size="25" /> <!-- Pole pro lokaci -->
@@ -809,6 +842,14 @@ function my_team_plugin_render_kseft_details_meta_box($post) {
     <br><br>
     <label for="kseft_event_date">Datum kšeftu:</label>
     <input type="date" name="kseft_event_date" id="kseft_event_date" value="<?php echo esc_attr($event_date); ?>" size="25" /> <!-- Pole pro datum kšeftu -->
+    <br><br>
+    <label for="kseft_responsible_for_drinks">Odpovědný za pitný režim:</label>
+    <select name="kseft_responsible_for_drinks" id="kseft_responsible_for_drinks">
+        <?php foreach ($roles as $role) : ?>
+            <?php $default_player = get_post_meta($role->ID, 'role_default_player', true); ?>
+            <option value="<?php echo esc_attr($default_player); ?>" <?php selected($responsible_for_drinks, $default_player); ?>><?php echo esc_html($default_player); ?></option>
+        <?php endforeach; ?>
+    </select> <!-- Výběr pro odpovědného za pitný režim -->
     <?php
 }
 
@@ -821,6 +862,9 @@ function my_team_plugin_save_kseft_details_meta_box_data($post_id) {
     }
     if (array_key_exists('kseft_event_date', $_POST)) {
         update_post_meta($post_id, 'kseft_event_date', sanitize_text_field($_POST['kseft_event_date'])); // Uložení data události
+    }
+    if (array_key_exists('kseft_responsible_for_drinks', $_POST)) {
+        update_post_meta($post_id, 'kseft_responsible_for_drinks', sanitize_text_field($_POST['kseft_responsible_for_drinks'])); // Uložení odpovědného za pitný režim
     }
 }
 add_action('save_post', 'my_team_plugin_save_kseft_details_meta_box_data'); // Přidání akce pro uložení metaboxů
@@ -1535,4 +1579,56 @@ function my_team_plugin_display_selected_role() {
 }
 add_action('wp_footer', 'my_team_plugin_display_selected_role');
 
+// ...existing code...
+
+function my_team_plugin_copy_kseft() {
+    if (!isset($_GET['copy_kseft_id'])) {
+        return;
+    }
+
+    $original_kseft_id = intval($_GET['copy_kseft_id']);
+    $original_kseft = get_post($original_kseft_id);
+
+    if (!$original_kseft || $original_kseft->post_type !== 'kseft') {
+        return;
+    }
+
+    $new_kseft_data = array(
+        'post_title' => $original_kseft->post_title . ' (Kopie)',
+        'post_type' => 'kseft',
+        'post_status' => 'draft'
+    );
+
+    $new_kseft_id = wp_insert_post($new_kseft_data);
+
+    if (is_wp_error($new_kseft_id)) {
+        wp_die('Chyba při kopírování kšeftu.');
+    }
+
+    $meta_keys = array(
+        'kseft_location',
+        'kseft_meeting_time',
+        'kseft_performance_start',
+        'kseft_performance_end',
+        'kseft_obsazeni_template',
+        'kseft_status',
+        'kseft_clothing',
+        'kseft_description',
+        'kseft_responsible_for_drinks'
+    );
+
+    foreach ($meta_keys as $meta_key) {
+        $meta_value = get_post_meta($original_kseft_id, $meta_key, true);
+        update_post_meta($new_kseft_id, $meta_key, $meta_value);
+    }
+
+    // Nastavení nového data kšeftu na dnešek
+    update_post_meta($new_kseft_id, 'kseft_event_date', date('Y-m-d'));
+
+    wp_redirect(add_query_arg(array('kseft_id' => $new_kseft_id), site_url('/manage-kseft')));
+    exit;
+}
+add_action('template_redirect', 'my_team_plugin_copy_kseft');
+
+// ...existing code...
 ?>
