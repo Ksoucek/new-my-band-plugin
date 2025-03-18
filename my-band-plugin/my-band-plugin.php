@@ -715,6 +715,31 @@ function my_team_plugin_get_adjacent_kseft($current_date, $direction = 'next') {
     return false; // Pokud nejsou žádné příspěvky, vrátí se false
 }
 
+// Přidání checkboxu pro potvrzení účasti za kohokoli
+function my_team_plugin_render_role_confirm_anyone_meta_box($post) {
+    $confirm_anyone = get_post_meta($post->ID, 'role_confirm_anyone', true); // Získání hodnoty checkboxu
+    ?>
+    <label for="role_confirm_anyone">
+        <input type="checkbox" name="role_confirm_anyone" id="role_confirm_anyone" value="1" <?php checked($confirm_anyone, '1'); ?> />
+        Potvrdit účast za kohokoli
+    </label>
+    <?php
+}
+add_action('add_meta_boxes', function () {
+    add_meta_box('role_confirm_anyone', 'Oprávnění', 'my_team_plugin_render_role_confirm_anyone_meta_box', 'role', 'side', 'default');
+});
+
+// Uložení hodnoty checkboxu
+function my_team_plugin_save_role_confirm_anyone_meta_box_data($post_id) {
+    if (array_key_exists('role_confirm_anyone', $_POST)) {
+        update_post_meta($post_id, 'role_confirm_anyone', '1'); // Uložení hodnoty "1" pokud je checkbox zaškrtnut
+    } else {
+        delete_post_meta($post_id, 'role_confirm_anyone'); // Smazání hodnoty pokud není checkbox zaškrtnut
+    }
+}
+add_action('save_post', 'my_team_plugin_save_role_confirm_anyone_meta_box_data');
+
+// Úprava logiky pro potvrzení účasti
 function my_team_plugin_save_role_confirmation() {
     check_ajax_referer('wp_rest', 'nonce');
     $post_id = intval($_POST['kseft_id']); // Získání ID příspěvku
@@ -724,7 +749,10 @@ function my_team_plugin_save_role_confirmation() {
     $pickup_location = sanitize_text_field($_POST['pickup_location']); // Sanitizace místa vyzvednutí
 
     // Kontrola, zda uživatel může potvrdit účast za tuto roli
-    if (!isset($_COOKIE['selectedRoleId']) || intval($_COOKIE['selectedRoleId']) !== $role_id) {
+    $current_role_id = isset($_COOKIE['selectedRoleId']) ? intval($_COOKIE['selectedRoleId']) : 0;
+    $confirm_anyone = get_post_meta($current_role_id, 'role_confirm_anyone', true);
+
+    if (!$confirm_anyone && $current_role_id !== $role_id) {
         wp_send_json_error('Nemáte oprávnění potvrdit účast za tuto roli.');
         wp_die();
     }
@@ -1619,7 +1647,7 @@ function my_team_plugin_copy_kseft() {
 
     foreach ($meta_keys as $meta_key) {
         $meta_value = get_post_meta($original_kseft_id, $meta_key, true);
-        update_post_meta($new_kseft_id, $meta_key, $meta_value);
+        update_post_meta($new_kseft_id, $meta_value);
     }
 
     // Nastavení nového data kšeftu na dnešek
