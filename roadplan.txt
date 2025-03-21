@@ -1,6 +1,7 @@
 TODO:
 výchozí hodnota jdu na potvrzení učasti..
 výchozí adresa vyzvednutí
+výchozí hodnota odpovědné osoby za pitný režím na prázdný
 pokud je záskok tak ho vypsat do popisu zvlášť při vytvoření dopravy
 historie změn
 ______________________________________
