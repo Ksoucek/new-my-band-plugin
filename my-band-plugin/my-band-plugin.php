@@ -25,7 +25,7 @@ function my_team_plugin_enqueue_scripts() {
         'post_id' => get_the_ID(), // ID aktuálního příspěvku
         'api_key' => get_option('my_team_plugin_openrouteservice_api_key'), // API klíč pro OpenRouteService
         'rest_url' => rest_url('google-calendar/v1/add-to-calendar'), // REST URL pro přidání do kalendáře
-        'kseft_id' => get_the_ID() // Přidání kseft_id
+        'kseft_id' => isset($_GET['kseft_id']) ? intval($_GET['kseft_id']) : 0 // Přidání kseft_id
      ));
     wp_enqueue_script('role-selection-script', plugins_url('/js/role-selection.js', __FILE__), array('jquery'), '1.0', true); // Načtení JS souboru pro výběr rolí
     wp_enqueue_script('google-calendar-script', plugins_url('/js/google-calendar.js', __FILE__), array('jquery', 'my-team-plugin-script'), '1.0', true); // Načtení JS souboru pro Google Kalendář
@@ -1622,7 +1622,7 @@ function my_team_plugin_copy_kseft() {
     }
 
     $new_kseft_data = array(
-        'post_title' => $original_kseft->post_title . ' (Kopie)',
+        'post_title' => $original_kseft->post_title . ' (Kopie)', // Nastavení názvu akce
         'post_type' => 'kseft',
         'post_status' => 'draft'
     );
@@ -1647,16 +1647,15 @@ function my_team_plugin_copy_kseft() {
 
     foreach ($meta_keys as $meta_key) {
         $meta_value = get_post_meta($original_kseft_id, $meta_key, true);
-        update_post_meta($new_kseft_id, $meta_value);
+        update_post_meta($new_kseft_id, $meta_key, $meta_value);
     }
 
     // Nastavení nového data kšeftu na dnešek
     update_post_meta($new_kseft_id, 'kseft_event_date', date('Y-m-d'));
 
+    // Přesměrování na stránku pro správu nového kšeftu s předvyplněnými daty
     wp_redirect(add_query_arg(array('kseft_id' => $new_kseft_id), site_url('/manage-kseft')));
     exit;
 }
-add_action('template_redirect', 'my_team_plugin_copy_kseft');
-
 // ...existing code...
 ?>

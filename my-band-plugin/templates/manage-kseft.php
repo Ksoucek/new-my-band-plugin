@@ -184,6 +184,7 @@ $copy_kseft_id = isset($_GET['copy_kseft_id']) ? intval($_GET['copy_kseft_id']) 
 if ($copy_kseft_id) {
     $kseft = get_post($copy_kseft_id);
     if ($kseft && $kseft->post_type === 'kseft') {
+        $kseft_name = $kseft->post_title . ' (Kopie)'; // Nastavení názvu akce
         $kseft_location = get_post_meta($copy_kseft_id, 'kseft_location', true);
         $kseft_meeting_time = get_post_meta($copy_kseft_id, 'kseft_meeting_time', true);
         $kseft_event_date = date('Y-m-d'); // Nastavení data na dnešek
@@ -194,7 +195,7 @@ if ($copy_kseft_id) {
         $kseft_description = get_post_meta($copy_kseft_id, 'kseft_description', true);
         $kseft_responsible_for_drinks = get_post_meta($copy_kseft_id, 'kseft_responsible_for_drinks', true);
         $kseft_obsazeni_template = get_post_meta($copy_kseft_id, 'kseft_obsazeni_template', true);
-        $kseft_id = ''; // Nastavení ID na 0, aby se vytvořil nový kšeft
+        $kseft_id = 0; // Nastavení ID na 0, aby se vytvořil nový kšeft
     }
 } else {
     $kseft = $kseft_id ? get_post($kseft_id) : null;
