@@ -47,14 +47,15 @@ jQuery(document).ready(function($) {
                             kseft_id: kseftId, // ID kšeftu
                             google_event_id: response.event_id // ID události
                         }).done(function(saveResponse) {
-                            if (saveResponse.success) {
+                            if (saveResponse && saveResponse.success) {
                                 console.log('Google Calendar event ID saved successfully.'); // Logování úspěchu uložení ID události
                             } else {
-                                console.error('Error saving Google Calendar event ID:', saveResponse.error); // Logování chyby uložení ID události
+                                var errorMessage = saveResponse && saveResponse.data ? saveResponse.data : 'Unknown error'; // Získání chybové zprávy
                             }
                         }).fail(function(xhr, status, error) {
                             console.error('AJAX error:', status, error); // Logování chyby AJAX požadavku
                             console.error('AJAX response:', xhr.responseText); // Logování odpovědi AJAX požadavku
+                            alert('Chyba při komunikaci se serverem při ukládání Google Calendar event ID.'); // Zobrazení chybové zprávy
                         });
                     }
                 } else {
@@ -68,6 +69,12 @@ jQuery(document).ready(function($) {
                 // alert('Akce nebyla upravena na google kalendáři update-GC.JS.'); // Zobrazení chybové zprávy
             }
         });
+    }
+
+    function decodeHtmlEntities(text) {
+        var textarea = document.createElement('textarea');
+        textarea.innerHTML = text;
+        return textarea.value;
     }
 
     function addToCalendarButtonHandler() {
@@ -93,18 +100,24 @@ jQuery(document).ready(function($) {
                 var kseftDescription = response.data.kseft_description; // Popis kšeftu
 
                 var eventDetails = {
-                    summary: kseftName, // Název události
-                    location: kseftLocation, // Lokace události
-                    description: kseftDescription, // Popis události
-                    start: {
-                        dateTime: eventDate + 'T' + startTime + ':00', // Začátek události
-                        timeZone: 'Europe/Prague' // Časová zóna
-                    },
-                    end: {
-                        dateTime: eventDate + 'T' + endTime + ':00', // Konec události
-                        timeZone: 'Europe/Prague' // Časová zóna
-                    }
+                    summary: decodeHtmlEntities(kseftName), // Dekódování názvu události
+                    location: decodeHtmlEntities(kseftLocation), // Dekódování lokace události
+                    description: decodeHtmlEntities(kseftDescription), // Dekódování popisu události
+                    start: {},
+                    end: {}
                 };
+
+                if (startTime && endTime) {
+                    // Pokud jsou vyplněny časy, nastavíme je
+                    eventDetails.start.dateTime = eventDate + 'T' + startTime + ':00';
+                    eventDetails.end.dateTime = eventDate + 'T' + endTime + ':00';
+                    eventDetails.start.timeZone = 'Europe/Prague';
+                    eventDetails.end.timeZone = 'Europe/Prague';
+                } else {
+                    // Pokud časy nejsou vyplněny, vytvoříme celodenní událost
+                    eventDetails.start.date = eventDate;
+                    eventDetails.end.date = eventDate;
+                }
 
                 console.log('JS Event details:', eventDetails); // Logování detailů události
 
@@ -142,18 +155,24 @@ jQuery(document).ready(function($) {
         }
 
         var eventDetails = {
-            summary: kseftName, // Název události
-            location: kseftLocation, // Lokace události
-            description: kseftDescription, // Popis události
-            start: {
-                dateTime: kseftEventDate + 'T' + kseftStartTime + ':00', // Začátek události
-                timeZone: 'Europe/Prague' // Časová zóna
-            },
-            end: {
-                dateTime: kseftEventDate + 'T' + kseftEndTime + ':00', // Konec události
-                timeZone: 'Europe/Prague' // Časová zóna
-            }
+            summary: decodeHtmlEntities(kseftName), // Dekódování názvu události
+            location: decodeHtmlEntities(kseftLocation), // Dekódování lokace události
+            description: decodeHtmlEntities(kseftDescription), // Dekódování popisu události
+            start: {},
+            end: {}
         };
+
+        if (kseftStartTime && kseftEndTime) {
+            // Pokud jsou vyplněny časy, nastavíme je
+            eventDetails.start.dateTime = kseftEventDate + 'T' + kseftStartTime + ':00';
+            eventDetails.end.dateTime = kseftEventDate + 'T' + kseftEndTime + ':00';
+            eventDetails.start.timeZone = 'Europe/Prague';
+            eventDetails.end.timeZone = 'Europe/Prague';
+        } else {
+            // Pokud časy nejsou vyplněny, vytvoříme celodenní událost
+            eventDetails.start.date = kseftEventDate;
+            eventDetails.end.date = kseftEventDate;
+        }
 
         var googleEventId = $('input[name="google_calendar_event_id"]').val(); // Získání ID události v Google Kalendáři
         if (googleEventId) {
