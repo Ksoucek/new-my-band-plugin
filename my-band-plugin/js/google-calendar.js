@@ -102,7 +102,7 @@ jQuery(document).ready(function($) {
                 var eventDetails = {
                     summary: decodeHtmlEntities(kseftName), // Dekódování názvu události
                     location: decodeHtmlEntities(kseftLocation), // Dekódování lokace události
-                    description: decodeHtmlEntities(kseftDescription), // Dekódování popisu události
+                    description: kseftDescription, // Dekódování popisu události
                     start: {},
                     end: {}
                 };

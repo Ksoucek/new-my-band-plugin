@@ -1107,6 +1107,8 @@ function my_team_plugin_get_event_details() {
     $meeting_time = get_post_meta($post_id, 'kseft_meeting_time', true); // Získání času srazu
     $kseft_name = get_the_title($post_id); // Získání názvu kšeftu
     $kseft_location = get_post_meta($post_id, 'kseft_location', true); // Získání lokace
+    $kseft_description = get_post_meta($post_id, 'kseft_description', true); // Získání description
+
     // Nová pole pro začátek a konec vystoupení:
     $performance_start = get_post_meta($post_id, 'kseft_performance_start', true);
     $performance_end = get_post_meta($post_id, 'kseft_performance_end', true);
@@ -1116,6 +1118,7 @@ function my_team_plugin_get_event_details() {
         'meeting_time' => $meeting_time,
         'kseft_name' => $kseft_name,
         'kseft_location' => $kseft_location,
+        'kseft_description' => $kseft_description,
         'performance_start' => $performance_start,
         'performance_end' => $performance_end
     );
