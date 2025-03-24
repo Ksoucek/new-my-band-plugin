@@ -373,7 +373,7 @@ function my_team_plugin_display_moje_ksefty() {
     $output .= '<form method="GET" action=""><label><input type="checkbox" name="show_all" value="1" ' . ($show_all ? 'checked' : '') . '> Zobrazit všechny Akce</label><button type="submit" class="button">Filtrovat</button></form>'; // Přidání zaškrtávacího políčka pro zobrazení všech kšeftů
     if ($ksefty->have_posts()) {
         $output .= '<table>';
-        $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></thead>';
+        $output .= '<thead><tr><th>Termín</th><th>Umístění</th><th>Název</th><th>Stav obsazení</th><th>Stav</th></thead>';
         $output .= '<tbody>';
         while ($ksefty->have_posts()) {
             $ksefty->the_post();
@@ -415,8 +415,8 @@ function my_team_plugin_display_moje_ksefty() {
             $formatted_date = date_i18n('D d.m.Y', strtotime($event_date)); // Formátování data
             $output .= '<tr>';
             $output .= '<td><a href="' . get_permalink() . '">' . esc_html($formatted_date) . '</a></td>'; // Přidání odkazu na termín
-            $output .= '<td><a href="' . get_permalink() . '">' . get_the_title() . '</a></td>'; // Přidání odkazu na název
             $output .= '<td><a href="' . get_permalink() . '">' . esc_html($location) . '</a></td>'; // Přidání odkazu na lokaci
+            $output .= '<td><a href="' . get_permalink() . '">' . get_the_title() . '</a></td>'; // Přidání odkazu na název
             $output .= '<td><a href="' . get_permalink() . '" class="button kseft-status-button ' . esc_attr($obsazeni_class) . '">' . esc_html($obsazeni_text) . '</a></td>'; // Přidání odkazu na stav obsazení
             $output .= '<td><a href="' . get_permalink() . '">' . esc_html($status) . '</a></td>'; // Přidání odkazu na stav
             $output .= '</tr>';
@@ -1239,8 +1239,8 @@ function my_team_plugin_kseft_overview_shortcode() {
         <thead>
             <tr>
                 <th>Termín</th>
-                <th>Název</th>
                 <th>Lokace</th>
+                <th>Název</th>
                 <th>Stav</th>
                 <th>Akce</th>
             </tr>
@@ -1268,8 +1268,8 @@ function my_team_plugin_kseft_overview_shortcode() {
                     ?>
                     <tr data-kseft-id="<?php echo get_the_ID(); ?>" data-role-ids='<?php echo json_encode($roles); ?>'>
                         <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($formatted_date); ?></a></td> <!-- Odkaz na termín -->
-                        <td><a href="<?php echo get_permalink(); ?>"><?php echo get_the_title(); ?></a></td> <!-- Odkaz na název -->
                         <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($location); ?></a></td> <!-- Odkaz na lokaci -->
+                        <td><a href="<?php echo get_permalink(); ?>"><?php echo get_the_title(); ?></a></td> <!-- Odkaz na název -->
                         <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($status); ?></a></td> <!-- Odkaz na stav -->
                         <td><button class="button confirm-role-button" data-kseft-id="<?php echo get_the_ID(); ?>">Potvrdit účast</button></td> <!-- Tlačítko pro potvrzení účasti -->
                     </tr>
