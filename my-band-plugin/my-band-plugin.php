@@ -193,6 +193,7 @@ function my_team_plugin_add_role_meta_boxes() {
     add_meta_box('role_default_player', 'Výchozí hráč', 'my_team_plugin_render_role_default_player_meta_box', 'role', 'normal', 'high'); // Přidání metaboxu pro výchozího hráče
     add_meta_box('role_default_pickup_location', 'Výchozí místo vyzvednutí', 'my_team_plugin_render_role_default_pickup_location_meta_box', 'role', 'normal', 'high'); // Přidání metaboxu pro výchozí místo vyzvednutí
     add_meta_box('role_password', 'Heslo role', 'my_team_plugin_render_role_password_meta_box', 'role', 'normal', 'high'); // Přidání metaboxu pro heslo role
+    add_meta_box('role_alternative', 'Alternativní role', 'my_team_plugin_render_role_alternative_meta_box', 'role', 'normal', 'high'); // Přidání metaboxu pro alternativní roli
 }
 add_action('add_meta_boxes', 'my_team_plugin_add_role_meta_boxes'); // Přidání akce pro přidání metaboxů
 
@@ -220,6 +221,20 @@ function my_team_plugin_render_role_password_meta_box($post) {
     <?php
 }
 
+function my_team_plugin_render_role_alternative_meta_box($post) {
+    $alternative_role = get_post_meta($post->ID, 'role_alternative', true); // Získání alternativní role
+    $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1)); // Získání všech rolí
+    ?>
+    <label for="role_alternative">Alternativní role:</label>
+    <select name="role_alternative" id="role_alternative">
+        <option value="">-- Vyberte alternativní roli --</option>
+        <?php foreach ($roles as $role) : ?>
+            <option value="<?php echo esc_attr($role->ID); ?>" <?php selected($alternative_role, $role->ID); ?>><?php echo esc_html($role->post_title); ?></option>
+        <?php endforeach; ?>
+    </select> <!-- Výběr pro alternativní roli -->
+    <?php
+}
+
 function my_team_plugin_save_role_meta_box_data($post_id) {
     if (array_key_exists('role_default_player', $_POST)) {
         update_post_meta($post_id, 'role_default_player', sanitize_text_field($_POST['role_default_player'])); // Uložení výchozího hráče
@@ -229,6 +244,9 @@ function my_team_plugin_save_role_meta_box_data($post_id) {
     }
     if (array_key_exists('role_password', $_POST)) {
         update_post_meta($post_id, 'role_password', sanitize_text_field($_POST['role_password'])); // Uložení hesla role
+    }
+    if (array_key_exists('role_alternative', $_POST)) {
+        update_post_meta($post_id, 'role_alternative', sanitize_text_field($_POST['role_alternative'])); // Uložení alternativní role
     }
 }
 add_action('save_post', 'my_team_plugin_save_role_meta_box_data'); // Přidání akce pro uložení metaboxů
@@ -300,7 +318,7 @@ function my_team_plugin_display_ksefty() {
                 $obsazeni_class = 'obsazeno'; // Pokud jsou všechny role potvrzeny, nastaví se třída
                 $obsazeni_text = $has_substitute ? 'Obsazeno se záskokem' : 'Obsazeno'; // Pokud je záskok, nastaví se text
             } else {
-                $obsazeni_class = 'neobsazeno'; // Pokud nejsou všechny role potvrzeny, nastaví se třída
+                $obsazeni_class = 'neobsazeno'; // Pokud nejsou všechny role potvrzena, nastaví se třída
                 $obsazeni_text = 'Neobsazeno'; // Nastaví se text
             }
             $formatted_date = date_i18n('D d.m.Y', strtotime($event_date)); // Formátování data
@@ -388,7 +406,7 @@ function my_team_plugin_display_moje_ksefty() {
                 $all_confirmed = false; // Pokud nejsou žádné role, nastaví se příznak
             }
             if ($all_confirmed) {
-                $obsazeni_class = 'obsazeno'; // Pokud jsou všechny role potvrzeny, nastaví se třída
+                $obsazeni_class = 'obsazeno'; // Pokud jsou všechny role potvrzena, nastaví se třída
                 $obsazeni_text = $has_substitute ? 'Obsazeno se záskokem' : 'Obsazeno'; // Pokud je záskok, nastaví se text
             } else {
                 $obsazeni_class = 'neobsazeno'; // Pokud nejsou všechny role potvrzena, nastaví se třída
