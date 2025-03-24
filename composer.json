@@ -4,7 +4,8 @@
     "type": "project",
     "require": {
         "google/apiclient": "^2.0",
-        "google/apiclient-services": "^0.350"
+        "google/apiclient-services": "^0.350",
+        "phpoffice/phpspreadsheet": "^1.29"
     },
     "autoload": {
         "psr-4": {

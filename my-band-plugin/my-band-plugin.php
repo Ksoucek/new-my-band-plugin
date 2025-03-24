@@ -920,7 +920,6 @@ function my_team_plugin_render_doprava_driver_meta_box($post) {
     <select name="doprava_driver" id="doprava_driver">
         <option value="">-- Vyberte řidiče --</option>
         <?php foreach ($roles as $role) : ?>
-    $destination = sanitize_text_field($_GET['destination']);
             <?php $driver_name = get_post_meta($role->ID, 'role_default_player', true); ?>
             <option value="<?php echo esc_attr($driver_name); ?>" <?php selected($driver, $driver_name); ?>><?php echo esc_html($driver_name); ?></option>
         <?php endforeach; ?>
@@ -1332,9 +1331,13 @@ add_action('wp_ajax_get_role_status', 'my_team_plugin_get_role_status'); // Při
 add_action('wp_ajax_nopriv_get_role_status', 'my_team_plugin_get_role_status'); // Přidání AJAX akce pro nepřihlášené uživatele
 
 function my_team_plugin_log_error($message) {
-    $log_file = plugin_dir_path(__FILE__) . '../custom_error_log.log'; // Cesta k log souboru
-    $timestamp = date('Y-m-d H:i:s'); // Získání aktuálního času
-    error_log("[$timestamp] $message\n", 3, $log_file); // Zápis zprávy do log souboru
+    // if (defined('WP_DEBUG') && WP_DEBUG === true) {
+    //     if (is_array($message) || is_object($message)) {
+    //         error_log(print_r($message, true));
+    //     } else {
+    //         error_log($message);
+    //     }
+    // }
 }
 
 
@@ -1661,4 +1664,268 @@ function my_team_plugin_copy_kseft() {
     exit;
 }
 // ...existing code...
+
+// Přidání menu položky pro import
+function my_team_plugin_add_import_page() {
+    add_submenu_page(
+        'edit.php?post_type=kseft',
+        'Import Kšeftů',
+        'Import z Excelu',
+        'manage_options',
+        'import-ksefty',
+        'my_team_plugin_render_import_page'
+    );
+}
+add_action('admin_menu', 'my_team_plugin_add_import_page');
+
+// Vykreslení stránky pro import
+function my_team_plugin_render_import_page() {
+    ?>
+    <div class="wrap">
+        <h1>Import Kšeftů z Excelu</h1>
+        
+        <div class="card">
+            <h2>Instrukce</h2>
+            <p>Nahrajte Excel soubor s následujícími sloupci:</p>
+            <ul>
+                <li>Název - název kšeftu</li>
+                <li>Datum - ve formátu DD.MM.YYYY</li>
+                <li>Lokace - místo konání</li>
+                <li>Čas začátku - ve formátu HH:MM (volitelné)</li>
+                <li>Čas konce - ve formátu HH:MM (volitelné)</li>
+                <li>Popis - popis kšeftu (volitelné)</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Nahrát soubor</h2>
+            <form method="post" enctype="multipart/form-data">
+                <?php wp_nonce_field('import_ksefty_nonce', 'import_ksefty_nonce'); ?>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row"><label for="excel_file">Excel soubor</label></th>
+                        <td>
+                            <input type="file" name="excel_file" id="excel_file" accept=".xlsx,.xls" required>
+                        </td>
+                    </tr>
+                </table>
+                <?php submit_button('Importovat'); ?>
+            </form>
+        </div>
+
+        <?php
+        // Zpracování nahraného souboru
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
+            if (!wp_verify_nonce($_POST['import_ksefty_nonce'], 'import_ksefty_nonce')) {
+                wp_die('Neplatný bezpečnostní token.');
+            }
+
+            $result = my_team_plugin_process_excel_import($_FILES['excel_file']);
+            
+            if (is_wp_error($result)) {
+                echo '<div class="notice notice-error"><p>' . esc_html($result->get_error_message()) . '</p></div>';
+            } else {
+                if (!empty($result['errors'])) {
+                    echo '<div class="notice notice-warning">';
+                    echo '<p><strong>Import byl dokončen s následujícími varováními:</strong></p>';
+                    echo '<ul>';
+                    foreach ($result['errors'] as $error) {
+                        echo '<li>' . esc_html($error) . '</li>';
+                    }
+                    echo '</ul>';
+                    echo '</div>';
+                }
+                
+                echo '<div class="notice notice-success"><p>';
+                echo 'Import byl dokončen. ';
+                echo 'Importováno: ' . esc_html($result['imported']) . ' kšeftů. ';
+                if (isset($result['skipped'])) {
+                    echo 'Přeskočeno: ' . esc_html($result['skipped']) . ' duplicitních kšeftů.';
+                }
+                echo '</p></div>';
+            }
+        }
+        ?>
+    </div>
+    <?php
+}
+
+// Definice společných polí pro import i export (přidáme na začátek souboru)
+function get_kseft_fields() {
+    return [
+        'Název',
+        'Lokace',
+        'Datum akce',
+        'Čas srazu',
+        'Začátek vystoupení',
+        'Konec vystoupení',
+        'Popis'
+    ];
+}
+
+// Import funkce
+function my_team_plugin_process_excel_import($file) {
+        require_once '/web/htdocs/www.hanackabrest.cz/home/vendor/autoload.php';
+        
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file['tmp_name']);
+        $worksheet = $spreadsheet->getActiveSheet();
+        $rows = $worksheet->toArray();
+        
+    // Přeskočit řádek s hlavičkou
+        array_shift($rows);
+
+    $result = [
+        'imported' => 0,
+        'skipped' => 0,
+        'errors' => []
+    ];
+
+    foreach ($rows as $row) {
+        if (empty($row[0])) continue; // Přeskočit prázdné řádky
+
+        // Použití stejného pořadí jako v exportu
+        $title = trim($row[0]);          // Název
+        $location = trim($row[1]);       // Lokace
+        $date = trim($row[2]);           // Datum akce
+        $meeting_time = trim($row[3]);   // Čas srazu
+        $performance_start = trim($row[4]); // Začátek vystoupení
+        $performance_end = trim($row[5]); // Konec vystoupení
+        $description = trim($row[6]);    // Popis
+
+        // Zbytek kódu zůstává stejný...
+    }
+}
+
+// Export funkce
+function my_team_plugin_handle_export() {
+    if (!current_user_can('manage_options')) {
+        wp_die('Nemáte oprávnění k exportu.');
+    }
+
+    if (!wp_verify_nonce($_POST['export_ksefty_nonce'], 'export_ksefty_action')) {
+        wp_die('Neplatný bezpečnostní token.');
+    }
+
+    $upload_dir = wp_upload_dir();
+    $filename = 'ksefty_export_' . date('Y-m-d') . '.xlsx';
+    $filepath = $upload_dir['basedir'] . '/' . $filename;
+
+    require_once '/web/htdocs/www.hanackabrest.cz/home/vendor/autoload.php';
+    
+    try {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Použití stejných polí jako pro import
+        $headers = get_kseft_fields();
+
+        // Nastavení hlaviček
+        foreach (range('A', chr(65 + count($headers) - 1)) as $i => $column) {
+            $sheet->setCellValue($column . '1', $headers[$i]);
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        // Formátování hlavičky
+        $lastColumn = chr(65 + count($headers) - 1);
+        $sheet->getStyle("A1:{$lastColumn}1")->applyFromArray([
+            'font' => ['bold' => true],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'CCCCCC']
+            ]
+        ]);
+
+        $ksefty = get_posts([
+            'post_type' => 'kseft',
+            'posts_per_page' => -1,
+            'orderby' => 'meta_value',
+            'meta_key' => 'kseft_event_date',
+            'order' => 'ASC'
+        ]);
+
+        $row = 2;
+        foreach ($ksefty as $kseft) {
+            $date = get_post_meta($kseft->ID, 'kseft_event_date', true);
+            if ($date) {
+                $date = date('d.m.Y', strtotime($date));
+            }
+
+            // Data ve stejném pořadí jako pro import
+            $data = [
+                $kseft->post_title,                                           // Název
+                get_post_meta($kseft->ID, 'kseft_location', true),           // Lokace
+                $date,                                                        // Datum akce
+                get_post_meta($kseft->ID, 'kseft_meeting_time', true),       // Čas srazu
+                get_post_meta($kseft->ID, 'kseft_performance_start', true),  // Začátek vystoupení
+                get_post_meta($kseft->ID, 'kseft_performance_end', true),    // Konec vystoupení
+                get_post_meta($kseft->ID, 'kseft_description', true)         // Popis
+            ];
+
+            // Vložení dat do řádku
+            foreach (range('A', $lastColumn) as $i => $column) {
+                $sheet->setCellValue($column . $row, $data[$i]);
+            }
+
+            $row++;
+        }
+
+        // Uložení a odeslání souboru
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save($filepath);
+
+        if (file_exists($filepath)) {
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment; filename="' . basename($filepath) . '"');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+            header('Content-Length: ' . filesize($filepath));
+            
+            readfile($filepath);
+            unlink($filepath);
+            exit;
+        }
+    } catch (Exception $e) {
+        wp_die('Chyba při vytváření Excel souboru: ' . $e->getMessage());
+    }
+}
+
+// Přidání AJAX handleru pro download
+add_action('wp_ajax_download_ksefty_export', 'my_team_plugin_handle_export_download');
+function my_team_plugin_handle_export_download() {
+    if (!current_user_can('manage_options')) {
+        wp_die('Nemáte oprávnění ke stažení souboru.');
+    }
+
+    if (!wp_verify_nonce($_GET['nonce'], 'download_ksefty_export')) {
+        wp_die('Neplatný bezpečnostní token.');
+    }
+
+    $file = sanitize_file_name($_GET['file']);
+    $file_path = wp_upload_dir()['basedir'] . '/' . $file;
+
+    if (file_exists($file_path)) {
+        header('Content-Description: File Transfer');
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . basename($file) . '"');
+        header('Content-Transfer-Encoding: binary');
+    header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($file_path));
+        
+        ob_clean();
+        flush();
+        readfile($file_path);
+        unlink($file_path);
+    exit;
+    }
+
+    wp_die('Soubor nenalezen.');
+}
 ?>
