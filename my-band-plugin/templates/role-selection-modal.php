@@ -8,8 +8,15 @@
                 <?php
                 $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
                 $allowed_roles = isset($_COOKIE['allowedRoles']) ? explode(',', $_COOKIE['allowedRoles']) : array();
+                $confirm_anyone = false;
                 foreach ($roles as $role) {
-                    if (in_array($role->ID, $allowed_roles)) {
+                    if (get_post_meta($role->ID, 'role_confirm_anyone', true)) {
+                        $confirm_anyone = true;
+                        break;
+                    }
+                }
+                foreach ($roles as $role) {
+                    if ($confirm_anyone || in_array($role->ID, $allowed_roles)) {
                         echo '<option value="' . esc_attr($role->ID) . '">' . esc_html($role->post_title) . '</option>';
                     }
                 }
