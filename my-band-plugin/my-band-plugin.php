@@ -1241,7 +1241,6 @@ function my_team_plugin_kseft_overview_shortcode() {
                 <th>Termín</th>
                 <th>Lokace</th>
                 <th>Název</th>
-                <th>Stav</th>
                 <th>Akce</th>
             </tr>
         </thead>
@@ -1270,7 +1269,6 @@ function my_team_plugin_kseft_overview_shortcode() {
                         <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($formatted_date); ?></a></td> <!-- Odkaz na termín -->
                         <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($location); ?></a></td> <!-- Odkaz na lokaci -->
                         <td><a href="<?php echo get_permalink(); ?>"><?php echo get_the_title(); ?></a></td> <!-- Odkaz na název -->
-                        <td><a href="<?php echo get_permalink(); ?>"><?php echo esc_html($status); ?></a></td> <!-- Odkaz na stav -->
                         <td><button class="button confirm-role-button" data-kseft-id="<?php echo get_the_ID(); ?>">Potvrdit účast</button></td> <!-- Tlačítko pro potvrzení účasti -->
                     </tr>
                     <?php
