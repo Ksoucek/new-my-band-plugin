@@ -84,6 +84,24 @@ if (!isset($_COOKIE['manage_kseft_access']) || $_COOKIE['manage_kseft_access'] !
     }
     exit;
 }
+// Nonce kontrola
+if (isset($_POST['submit_kseft'])) {
+    if (!isset($_POST['kseft_nonce']) || !wp_verify_nonce($_POST['kseft_nonce'], 'save_kseft')) {
+        wp_die(__('Neplatný bezpečnostní token.', 'my-band-plugin'));
+    }
+    // Sanitizace vstupů
+    $kseft_name = sanitize_text_field($_POST['kseft_name']);
+    $kseft_location = sanitize_text_field($_POST['kseft_location']);
+    $kseft_meeting_time = sanitize_text_field($_POST['kseft_meeting_time']);
+    $kseft_event_date = sanitize_text_field($_POST['kseft_event_date']);
+    $kseft_performance_start = sanitize_text_field($_POST['kseft_performance_start']); // Přidání pole pro začátek vystoupení
+    $kseft_performance_end = sanitize_text_field($_POST['kseft_performance_end']); // Přidání pole pro konec vystoupení
+    $kseft_obsazeni_template = sanitize_text_field($_POST['kseft_obsazeni_template']);
+    $kseft_status = sanitize_text_field($_POST['kseft_status']); // Přidání pole pro stav
+    $kseft_clothing = sanitize_text_field($_POST['kseft_clothing']); // Přidání pole pro oblečení
+    $kseft_description = sanitize_textarea_field($_POST['kseft_description']); // Přidání pole pro popis
+    $kseft_responsible_for_drinks = sanitize_text_field($_POST['kseft_responsible_for_drinks']); // Přidání pole pro odpovědného za pitný režim
+}
 
 /* Template Name: Manage Kseft */
 

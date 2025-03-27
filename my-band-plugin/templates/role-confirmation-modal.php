@@ -2,6 +2,7 @@
     <div class="modal-content">
         <h3>Potvrdit účast</h3>
         <form id="role-confirmation-form">
+            <?php wp_nonce_field('role_confirmation_action', 'role_confirmation_nonce'); ?>
             <input type="hidden" name="kseft_id" id="kseft_id" value="">
             <input type="hidden" name="role_id" id="role_id" value="">
             <label for="role_status">Stav účasti:</label>

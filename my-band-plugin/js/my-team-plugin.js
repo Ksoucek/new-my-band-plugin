@@ -107,59 +107,74 @@ jQuery(document).ready(function($) {
         });
     });
 
-    function initializeAutocomplete(inputId, mapId) {
-        var input = document.getElementById(inputId);
-        if (!input) {
-            console.error('Element with id "' + inputId + '" not found.');
-            return;
-        }
+    // Implementace debouncing
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
 
-        var autocomplete = new google.maps.places.Autocomplete(input);
-        var mapElement = document.getElementById(mapId);
-        if (!mapElement) {
-            console.error('Element with id "' + mapId + '" not found.');
-            return;
-        }
+    // Optimalizovaný autocomplete
+    const initializeAutocomplete = debounce((inputId, mapId) => {
+        const input = document.getElementById(inputId);
+        if (!input) return;
 
-        var map = new google.maps.Map(mapElement, {
-            center: { lat: -34.397, lng: 150.644 },
-            zoom: 8
-        });
-        var marker = new google.maps.Marker({
-            map: map,
-            anchorPoint: new google.maps.Point(0, -29)
-        });
-
-        autocomplete.addListener('place_changed', function() {
-            marker.setVisible(false);
-            var place = autocomplete.getPlace();
-            if (!place.geometry) {
-                window.alert("No details available for input: '" + place.name + "'");
+        try {
+            const autocomplete = new google.maps.places.Autocomplete(input);
+            var mapElement = document.getElementById(mapId);
+            if (!mapElement) {
+                console.error('Element with id "' + mapId + '" not found.');
                 return;
             }
 
-            // If the place has a geometry, then present it on a map.
-            if (place.geometry.viewport) {
-                map.fitBounds(place.geometry.viewport);
-            } else {
-                map.setCenter(place.geometry.location);
-                map.setZoom(17);  // Why 17? Because it looks good.
-            }
-            marker.setPosition(place.geometry.location);
-            marker.setVisible(true);
+            var map = new google.maps.Map(mapElement, {
+                center: { lat: -34.397, lng: 150.644 },
+                zoom: 8
+            });
+            var marker = new google.maps.Marker({
+                map: map,
+                anchorPoint: new google.maps.Point(0, -29)
+            });
 
-            var address = '';
-            if (place.address_components) {
-                address = [
-                    (place.address_components[0] && place.address_components[0].short_name || ''),
-                    (place.address_components[1] && place.address_components[1].short_name || ''),
-                    (place.address_components[2] && place.address_components[2].short_name || '')
-                ].join(' ');
-            }
+            autocomplete.addListener('place_changed', function() {
+                marker.setVisible(false);
+                var place = autocomplete.getPlace();
+                if (!place.geometry) {
+                    window.alert("No details available for input: '" + place.name + "'");
+                    return;
+                }
 
-            $('#' + inputId).val(address);
-        });
-    }
+                // If the place has a geometry, then present it on a map.
+                if (place.geometry.viewport) {
+                    map.fitBounds(place.geometry.viewport);
+                } else {
+                    map.setCenter(place.geometry.location);
+                    map.setZoom(17);  // Why 17? Because it looks good.
+                }
+                marker.setPosition(place.geometry.location);
+                marker.setVisible(true);
+
+                var address = '';
+                if (place.address_components) {
+                    address = [
+                        (place.address_components[0] && place.address_components[0].short_name || ''),
+                        (place.address_components[1] && place.address_components[1].short_name || ''),
+                        (place.address_components[2] && place.address_components[2].short_name || '')
+                    ].join(' ');
+                }
+
+                $('#' + inputId).val(address);
+            });
+        } catch (error) {
+            console.error('Chyba při inicializaci autocomplete:', error);
+        }
+    }, 250);
 
     // Initialize autocomplete for all address inputs if they exist
     if (document.getElementById('pickup_location')) {
@@ -352,4 +367,10 @@ jQuery(document).ready(function($) {
             updateConfirmButton(kseftId, currentRoleId);
         }
     });
+
+    // AJAX error handling
+    function handleAjaxError(error, context) {
+        my_band_plugin_log_error(`AJAX error v ${context}: ${error.message}`);
+        alert('Došlo k chybě při komunikaci se serverem. Zkuste to prosím později.');
+    }
 });
