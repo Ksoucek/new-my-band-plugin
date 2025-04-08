@@ -21,7 +21,7 @@ function invoice_generator_add_meta_box() {
         'high'
     );
 }
-add_action('add_meta_boxes', 'invoice_generator_add_meta_box');
+add_action('add_meta_boxes Invoice', 'invoice_generator_add_meta_box');
 
 function invoice_generator_render_meta_box($post) {
     $invoice_data = get_post_meta($post->ID, 'invoice_data', true);
@@ -71,7 +71,7 @@ function invoice_generator_display_invoice($content) {
     }
     return $content;
 }
-add_filter('the_content', 'invoice_generator_display_invoice');
+add_filter('the_content_Invoice', 'invoice_generator_display_invoice');
 
 function invoice_generator_generate_qr_code($invoice_data) {
     // Sestavení řetězce podle specifikace QR Platba
