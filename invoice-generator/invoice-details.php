@@ -20,6 +20,12 @@ $invoice_data = wp_parse_args($invoice_data, array(
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invoice_data'])) {
     check_admin_referer('save_invoice_details');
+
+    // Pokud číslo faktury není nastaveno, vygenerujeme nové
+    if (empty($invoice_data['invoice_number'])) {
+        $invoice_data['invoice_number'] = invoice_generator_get_unique_invoice_number();
+    }
+
     update_post_meta($invoice_id, 'invoice_data', $_POST['invoice_data']);
     $invoice_data = $_POST['invoice_data']; // Aktualizace zobrazených dat
     echo '<div class="updated"><p>Faktura byla úspěšně uložena.</p></div>';
@@ -58,7 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_pdf_invoice'
         $invoice_data['pdf_invoice_url'] = $pdf_url; // Uložíme URL PDF faktury do aktuálních dat
         echo '<div class="updated"><p>PDF faktura byla úspěšně vygenerována. <a href="' . esc_url($pdf_url) . '" target="_blank">Stáhnout fakturu</a></p></div>';
     } else {
-        echo '<div class="error"><p>Chyba při generování PDF faktury. Zkontrolujte nastavení pluginu.</p></div>';
+        $error_message = 'Chyba při generování PDF faktury. Zkontrolujte nastavení pluginu.';
+        echo '<div class="error"><p>' . esc_html($error_message) . '</p></div>';
+        echo '<script>console.error("' . esc_js($error_message) . '");</script>'; // Výpis chyby do konzole
     }
 
     // Zakomentujte přesměrování, pokud existuje

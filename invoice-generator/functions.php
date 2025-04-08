@@ -1,6 +1,22 @@
 <?php
+/**
+ * Vygeneruje unikátní číslo faktury.
+ */
+function invoice_generator_get_unique_invoice_number() {
+    $last_invoice_id = get_option('invoice_generator_last_invoice_id', 0);
+    $new_invoice_id = $last_invoice_id + 1;
+    update_option('invoice_generator_last_invoice_id', $new_invoice_id);
+    return $new_invoice_id;
+}
+
 function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
     error_log('Funkce invoice_generator_generate_pdf byla spuštěna.');
+
+    // Pokud číslo faktury není nastaveno, vygenerujeme nové
+    if (empty($invoice_data['invoice_number'])) {
+        $invoice_data['invoice_number'] = invoice_generator_get_unique_invoice_number();
+        update_post_meta($invoice_id, 'invoice_data', $invoice_data);
+    }
 
     // Ověříme, zda knihovna existuje o jednu úroveň výš nad kořenovým adresářem WordPressu
     $fpdf_path = dirname(ABSPATH) . '/vendor/setasign/fpdf/fpdf.php';
@@ -15,19 +31,40 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
     try {
         $pdf = new FPDF();
         $pdf->AddPage();
-        $pdf->SetFont('Arial', 'B', 16);
+
+        // Nastavení fontu s podporou diakritiky
+        $font_path = dirname(ABSPATH) . '/vendor/setasign/fpdf/font/DejaVuSans.ttf';
+        if (!file_exists($font_path)) {
+            error_log('Font DejaVuSans nebyl nalezen na cestě: ' . $font_path);
+            return false;
+        }
+        $pdf->AddFont('DejaVu', '', 'DejaVuSans.ttf', true);
+        $pdf->SetFont('DejaVu', '', 12);
 
         // Hlavička faktury
+        $pdf->SetFont('DejaVu', 'B', 16);
         $pdf->Cell(0, 10, 'Faktura', 0, 1, 'C');
         $pdf->Ln(10);
 
         // Informace o faktuře
-        $pdf->SetFont('Arial', '', 12);
-        $pdf->Cell(0, 10, 'Cislo faktury: ' . $invoice_id, 0, 1);
-        $pdf->Cell(0, 10, 'Datum vystaveni: ' . date('Y-m-d'), 0, 1);
-        $pdf->Cell(0, 10, 'Castka: ' . $invoice_data['amount'] . ' CZK', 0, 1);
-        $pdf->Cell(0, 10, 'Variabilni symbol: ' . $invoice_data['variable_symbol'], 0, 1);
-        $pdf->Cell(0, 10, 'Status: ' . $invoice_data['status'], 0, 1);
+        $pdf->SetFont('DejaVu', '', 12);
+        $pdf->Cell(0, 10, 'Číslo faktury: ' . $invoice_data['invoice_number'], 0, 1);
+        $pdf->Cell(0, 10, 'Datum vystavení: ' . date('Y-m-d'), 0, 1);
+        $pdf->Cell(0, 10, 'Částka: ' . $invoice_data['amount'] . ' CZK', 0, 1);
+        $pdf->Cell(0, 10, 'Variabilní symbol: ' . $invoice_data['variable_symbol'], 0, 1);
+
+        // Přidání QR kódu, pokud existuje
+        if (!empty($invoice_data['qr_code_url'])) {
+            $qr_code_path = str_replace(wp_upload_dir()['baseurl'], wp_upload_dir()['basedir'], $invoice_data['qr_code_url']);
+            if (file_exists($qr_code_path)) {
+                $pdf->Ln(10);
+                $pdf->Cell(0, 10, 'QR Kód pro platbu:', 0, 1);
+                $pdf->Image($qr_code_path, $pdf->GetX(), $pdf->GetY(), 50, 50); // Přidání QR kódu jako obrázku
+                $pdf->Ln(60);
+            } else {
+                error_log('QR kód nebyl nalezen na cestě: ' . $qr_code_path);
+            }
+        }
 
         error_log('Data faktury byla přidána do PDF.');
 
