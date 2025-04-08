@@ -316,7 +316,7 @@ function my_team_plugin_display_ksefty() {
                 $all_confirmed = false; // Pokud nejsou žádné role, nastaví se příznak
             }
             if ($all_confirmed) {
-                $obsazeni_class = 'obsazeno'; // Pokud jsou všechny role potvrzeny, nastaví se třída
+                $obsazeni_class = 'obsazeno'; // Pokud jsou všechny role potvrzena, nastaví se třída
                 $obsazeni_text = $has_substitute ? 'Obsazeno se záskokem' : 'Obsazeno'; // Pokud je záskok, nastaví se text
             } else {
                 $obsazeni_class = 'neobsazeno'; // Pokud nejsou všechny role potvrzena, nastaví se třída
@@ -383,7 +383,7 @@ function my_team_plugin_display_moje_ksefty() {
             $status = get_post_meta(get_the_ID(), 'kseft_status', true); // Získání stavu
             $obsazeni_template_id = get_post_meta(get_the_ID(), 'kseft_obsazeni_template', true); // Získání ID šablony obsazení
             $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true); // Získání rolí
-            $all_confirmed = true; // Předpoklad, že všechny role jsou potvrzeny
+            $all_confirmed = true; // Předpoklad, že všechny role jsou potvrzena
             $has_substitute = false; // Předpoklad, že žádná role nemá záskok
             $pickup_location = ''; // Výchozí hodnota pro místo vyzvednutí
             $pickup_time = ''; // Výchozí hodnota pro čas vyzvednutí
@@ -1630,8 +1630,6 @@ function my_team_plugin_display_selected_role() {
 }
 add_action('wp_footer', 'my_team_plugin_display_selected_role');
 
-// ...existing code...
-
 function my_team_plugin_copy_kseft() {
     if (!isset($_GET['copy_kseft_id'])) {
         return;
@@ -1670,7 +1668,7 @@ function my_team_plugin_copy_kseft() {
 
     foreach ($meta_keys as $meta_key) {
         $meta_value = get_post_meta($original_kseft_id, $meta_key, true);
-        update_post_meta($new_kseft_id, $meta_key, $meta_value);
+        update_post_meta($new_kseft_id, $meta_value, $meta_value);
     }
 
     // Nastavení nového data kšeftu na dnešek
@@ -1680,4 +1678,58 @@ function my_team_plugin_copy_kseft() {
     wp_redirect(add_query_arg(array('kseft_id' => $new_kseft_id), site_url('/manage-kseft')));
     exit;
 }
+
+// Přidání nové AJAX akce pro kontrolu přístupu na kartu kšeftu
+function my_team_plugin_check_kseft_access() {
+    check_ajax_referer('wp_rest', 'nonce');
+
+    $kseft_id = intval($_POST['kseft_id']);
+    $current_user = wp_get_current_user();
+
+    // Kontrola, zda je uživatel přihlášen
+    if (!$current_user->exists()) {
+        wp_send_json_error(array('message' => 'Uživatel není přihlášen.'));
+    }
+
+    // Kontrola, zda má uživatel oprávnění k přístupu
+    $allowed_roles = get_post_meta($kseft_id, 'allowed_roles', true);
+    if (!is_array($allowed_roles) || !array_intersect($current_user->roles, $allowed_roles)) {
+        wp_send_json_error(array('message' => 'Nemáte oprávnění k přístupu na tuto stránku.'));
+    }
+
+    wp_send_json_success(array('message' => 'Přístup povolen.'));
+}
+add_action('wp_ajax_check_kseft_access', 'my_team_plugin_check_kseft_access'); // AJAX akce pro přihlášené uživatele
+add_action('wp_ajax_nopriv_check_kseft_access', 'my_team_plugin_check_kseft_access'); // AJAX akce pro nepřihlášené uživatele
+
+function my_team_plugin_restrict_kseft_access() {
+    if (is_singular('kseft')) {
+        $kseft_id = get_the_ID();
+        $selected_role_id = isset($_COOKIE['selectedRoleId']) ? intval($_COOKIE['selectedRoleId']) : 0;
+
+        // Pokud není v cookies nastavena role, zobrazíme chybu 404
+        if (!$selected_role_id) {
+            global $wp_query;
+            $wp_query->set_404();
+            status_header(404);
+            nocache_headers();
+            include(get_query_template('404'));
+            exit;
+        }
+
+        // Získání šablony obsazení a kontrola, zda role odpovídá
+        $obsazeni_template_id = get_post_meta($kseft_id, 'kseft_obsazeni_template', true);
+        $template_roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
+
+        if (!is_array($template_roles) || !in_array($selected_role_id, $template_roles)) {
+            global $wp_query;
+            $wp_query->set_404();
+            status_header(404);
+            nocache_headers();
+            include(get_query_template('404'));
+            exit;
+        }
+    }
+}
+add_action('template_redirect', 'my_team_plugin_restrict_kseft_access');
 ?>

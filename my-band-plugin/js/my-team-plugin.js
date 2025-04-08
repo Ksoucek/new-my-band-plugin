@@ -1,7 +1,16 @@
 jQuery(document).ready(function($) {
     console.log('JavaScript file loaded');
 
+    function checkRoleSelected() {
+        if (!window.sessionStorage.getItem('selectedRoleId')) {
+            alert('Prosím vyberte roli před pokračováním.');
+            return false;
+        }
+        return true;
+    }
+
     $('#add-member-button').click(function() {
+        if (!checkRoleSelected()) return;
         var teamId = $('#team-id').val();
         var memberName = $('#member-name').val();
         $.post(myTeamPlugin.ajax_url, {
@@ -14,6 +23,7 @@ jQuery(document).ready(function($) {
     });
 
     $('#schedule-event-button').click(function() {
+        if (!checkRoleSelected()) return;
         var teamId = $('#team-id').val();
         var eventName = $('#event-name').val();
         var eventDate = $('#event-date').val();
@@ -28,6 +38,7 @@ jQuery(document).ready(function($) {
     });
 
     $('#create-kseft-button').click(function() {
+        if (!checkRoleSelected()) return;
         var kseftName = $('#kseft-name').val();
         $.post(myTeamPlugin.ajax_url, {
             action: 'my_team_plugin_create_kseft',
