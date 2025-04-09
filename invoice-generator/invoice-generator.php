@@ -48,6 +48,7 @@ function invoice_generator_display_invoice($content) {
     if (is_singular('kseft')) {
         $post_id = get_the_ID();
         $invoice_data = get_post_meta($post_id, 'invoice_data', true);
+        $logo_url = get_option('invoice_generator_logo', '');
 
         if ($invoice_data) {
             $account_number = get_option('invoice_generator_account_number', '');
@@ -62,6 +63,9 @@ function invoice_generator_display_invoice($content) {
                 'due_date' => $due_date
             ]));
 
+            if (!empty($logo_url)) {
+                $content .= '<img src="' . esc_url($logo_url) . '" alt="Logo" style="max-width: 200px; margin-bottom: 20px;" />';
+            }
             $content .= '<h3>Fakturační údaje</h3>';
             $content .= '<p><strong>Částka:</strong> ' . esc_html($invoice_data['amount']) . ' Kč</p>';
             $content .= '<p><strong>Číslo účtu:</strong> ' . esc_html($account_number) . '/' . esc_html($bank_code) . '</p>';
@@ -159,6 +163,7 @@ function invoice_generator_register_settings() {
     register_setting('invoice_generator_settings_group', 'invoice_generator_account_number'); // Číslo účtu
     register_setting('invoice_generator_settings_group', 'invoice_generator_bank_code'); // Kód banky
     register_setting('invoice_generator_settings_group', 'invoice_generator_default_due_days'); // Výchozí splatnost
+    register_setting('invoice_generator_settings_group', 'invoice_generator_logo'); // Logo
 
     add_settings_section(
         'invoice_generator_settings_section',
@@ -198,8 +203,16 @@ function invoice_generator_register_settings() {
         'invoice-generator-settings',
         'invoice_generator_settings_section'
     );
+
+    add_settings_field(
+        'invoice_generator_logo',
+        'Logo (obrázek)',
+        'invoice_generator_logo_callback',
+        'invoice-generator-settings',
+        'invoice_generator_settings_section'
+    );
 }
-add_action('admin_init', 'invoice_generator_register_settings');
+add_action('admin_init', 'invoice_generator_register_settings'); // Správné volání pro registraci nastavení
 
 function invoice_generator_password_callback() {
     $password = get_option('invoice_generator_password', '');
@@ -226,6 +239,19 @@ function invoice_generator_default_due_days_callback() {
     $default_due_days = get_option('invoice_generator_default_due_days', 14); // Výchozí hodnota 14 dní
     ?>
     <input type="number" name="invoice_generator_default_due_days" value="<?php echo esc_attr($default_due_days); ?>" size="5">
+    <?php
+}
+
+function invoice_generator_logo_callback() {
+    $logo_url = get_option('invoice_generator_logo', '');
+    ?>
+    <input type="hidden" id="invoice_generator_logo" name="invoice_generator_logo" value="<?php echo esc_attr($logo_url); ?>">
+    <button type="button" class="button" id="upload_logo_button">Nahrát logo</button>
+    <div id="logo_preview" style="margin-top: 10px;">
+        <?php if ($logo_url): ?>
+            <img src="<?php echo esc_url($logo_url); ?>" alt="Logo" style="max-width: 200px;">
+        <?php endif; ?>
+    </div>
     <?php
 }
 
@@ -313,4 +339,12 @@ function invoice_generator_protect_pages() {
     }
 }
 add_action('template_redirect', 'invoice_generator_protect_pages');
+
+function invoice_generator_enqueue_admin_scripts($hook) {
+    if ($hook === 'settings_page_invoice-generator-settings') {
+        wp_enqueue_media(); // Načtení Media Uploaderu pouze na stránce nastavení pluginu
+        wp_enqueue_script('invoice-generator-admin-script', plugins_url('/js/admin.js', __FILE__), array('jquery'), null, true);
+    }
+}
+add_action('admin_enqueue_scripts', 'invoice_generator_enqueue_admin_scripts');
 ?>

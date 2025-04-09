@@ -12,11 +12,9 @@ function invoice_generator_get_unique_invoice_number() {
 function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
     error_log('Funkce invoice_generator_generate_pdf byla spuštěna.');
 
-    // Pokud číslo faktury není nastaveno, vygenerujeme nové
-    if (empty($invoice_data['invoice_number'])) {
-        $invoice_data['invoice_number'] = invoice_generator_get_unique_invoice_number();
-        update_post_meta($invoice_id, 'invoice_data', $invoice_data);
-    }
+    // Nastavíme číslo faktury na ID kšeftu
+    $invoice_data['invoice_number'] = $invoice_id;
+    update_post_meta($invoice_id, 'invoice_data', $invoice_data);
 
     // Ověříme, zda knihovna existuje o jednu úroveň výš nad kořenovým adresářem WordPressu
     $fpdf_path = dirname(ABSPATH) . '/vendor/setasign/fpdf/fpdf.php';
@@ -32,38 +30,57 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         $pdf = new FPDF();
         $pdf->AddPage();
 
-        // Nastavení fontu s podporou diakritiky
-        $font_path = dirname(ABSPATH) . '/vendor/setasign/fpdf/font/DejaVuSans.ttf';
-        if (!file_exists($font_path)) {
-            error_log('Font DejaVuSans nebyl nalezen na cestě: ' . $font_path);
-            return false;
+        // Registrace fontů
+        $pdf->AddFont('DejaVu', '', 'DejaVuSans.php');
+        $pdf->AddFont('DejaVu', 'B', 'DejaVuSans-Bold.php');
+        $pdf->AddFont('DejaVu', 'I', 'DejaVuSans-Oblique.php');
+        $pdf->AddFont('DejaVu', 'BI', 'DejaVuSans-BoldOblique.php');
+
+        // Funkce pro převod textu na ISO-8859-2
+        $convert_to_iso = function ($text) {
+            return iconv('UTF-8', 'ISO-8859-2//TRANSLIT', $text);
+        };
+
+        // Přidání loga firmy
+        $logo_path = get_option('invoice_generator_company_logo', '');
+        if (!empty($logo_path)) {
+            $logo_path = str_replace(wp_upload_dir()['baseurl'], wp_upload_dir()['basedir'], $logo_path);
+            if (file_exists($logo_path)) {
+                $pdf->Image($logo_path, 10, 10, 50); // Logo v levém horním rohu, šířka 50 mm
+                $pdf->Ln(20); // Posun dolů po přidání loga
+            } else {
+                error_log('Logo firmy nebylo nalezeno na cestě: ' . $logo_path);
+            }
         }
-        $pdf->AddFont('DejaVu', '', 'DejaVuSans.ttf', true);
-        $pdf->SetFont('DejaVu', '', 12);
 
         // Hlavička faktury
         $pdf->SetFont('DejaVu', 'B', 16);
-        $pdf->Cell(0, 10, 'Faktura', 0, 1, 'C');
+        $pdf->Cell(0, 10, $convert_to_iso('Faktura '). $invoice_data['invoice_number'], 0, 1, 'C');
         $pdf->Ln(10);
 
         // Informace o faktuře
         $pdf->SetFont('DejaVu', '', 12);
-        $pdf->Cell(0, 10, 'Číslo faktury: ' . $invoice_data['invoice_number'], 0, 1);
-        $pdf->Cell(0, 10, 'Datum vystavení: ' . date('Y-m-d'), 0, 1);
-        $pdf->Cell(0, 10, 'Částka: ' . $invoice_data['amount'] . ' CZK', 0, 1);
-        $pdf->Cell(0, 10, 'Variabilní symbol: ' . $invoice_data['variable_symbol'], 0, 1);
+        $pdf->Cell(0, 10, $convert_to_iso('Datum vystavení: ') . date('d.m.Y'), 0, 1);
+
+        // Formátování částky na účetní formát
+        $formatted_amount = number_format($invoice_data['amount'], 2, ',', ' ');
+        $pdf->Cell(0, 10, $convert_to_iso('Částka: ') . $formatted_amount . ' CZK', 0, 1);
+
+        $pdf->Cell(0, 10, $convert_to_iso('Variabilní symbol: ') . $invoice_data['variable_symbol'], 0, 1);
 
         // Přidání QR kódu, pokud existuje
         if (!empty($invoice_data['qr_code_url'])) {
             $qr_code_path = str_replace(wp_upload_dir()['baseurl'], wp_upload_dir()['basedir'], $invoice_data['qr_code_url']);
             if (file_exists($qr_code_path)) {
                 $pdf->Ln(10);
-                $pdf->Cell(0, 10, 'QR Kód pro platbu:', 0, 1);
+                $pdf->Cell(0, 10, $convert_to_iso('QR Kód pro platbu:'), 0, 1);
                 $pdf->Image($qr_code_path, $pdf->GetX(), $pdf->GetY(), 50, 50); // Přidání QR kódu jako obrázku
                 $pdf->Ln(60);
             } else {
                 error_log('QR kód nebyl nalezen na cestě: ' . $qr_code_path);
             }
+        } else {
+            error_log('QR kód není dostupný v $invoice_data[qr_code_url].');
         }
 
         error_log('Data faktury byla přidána do PDF.');
@@ -77,6 +94,7 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         if (!file_exists($invoices_dir)) {
             if (!mkdir($invoices_dir, 0755, true) && !is_dir($invoices_dir)) {
                 error_log('Nepodařilo se vytvořit adresář pro faktury: ' . $invoices_dir);
+                echo '<script>console.error("Nepodařilo se vytvořit adresář pro faktury: ' . esc_js($invoices_dir) . '");</script>';
                 return false;
             }
         }
@@ -88,10 +106,12 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
             return $pdf_url;
         } else {
             error_log('Chyba: PDF nebylo vytvořeno.');
+            echo '<script>console.error("Chyba: PDF nebylo vytvořeno.");</script>';
             return false;
         }
     } catch (Exception $e) {
         error_log('Výjimka při generování PDF: ' . $e->getMessage());
+        echo '<script>console.error("Výjimka při generování PDF: ' . esc_js($e->getMessage()) . '");</script>';
         return false;
     }
 }

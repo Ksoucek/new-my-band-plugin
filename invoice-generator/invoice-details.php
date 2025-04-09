@@ -6,11 +6,22 @@ Template Name: Invoice Details
 // Načtení funkcí pluginu
 require_once plugin_dir_path(__FILE__) . 'functions.php';
 
+global $wp_query;
+
+// Získání ID faktury z parametru URL
 $invoice_id = isset($_GET['invoice_id']) ? intval($_GET['invoice_id']) : 0;
 if (!$invoice_id) {
-    wp_die('Faktura nebyla nalezena.');
+    // Pokud není ID faktury, nastavíme chybu 404
+    $wp_query->set_404();
+    status_header(404);
+    get_template_part(404);
+    exit;
 }
 
+// Explicitně nastavíme, že stránka není 404
+$wp_query->is_404 = false;
+
+// Načtení dat faktury
 $invoice_data = get_post_meta($invoice_id, 'invoice_data', true);
 $invoice_data = wp_parse_args($invoice_data, array(
     'amount' => '',
@@ -86,7 +97,7 @@ get_header(); // Načtení hlavičky šablony
     }
 </style>
 <div class="wrap">
-    <h1>Detail Faktury</h1>
+    <h1>Detail Faktury  <?php echo esc_html($invoice_id); ?></h1>
     <a href="<?php echo site_url('/faktury'); ?>" class="button">Zpět na přehled faktur</a>
     <form method="post">
         <?php wp_nonce_field('save_invoice_details'); ?>
