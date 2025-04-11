@@ -144,10 +144,10 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         }
 
         // Uložení PDF s názvem podle formátu "invoice-{číslo kšeftu}.pdf"
-        $output_path = $invoices_dir . 'invoice-' . $invoice_id . '.pdf';
+        $output_path = $invoices_dir . 'faktura-' . $invoice_id . '.pdf';
         $pdf->Output($output_path, 'F');
         // Vytvoření URL namísto lokální cesty
-        $output_url = $upload_dir['baseurl'] . '/invoices/invoice-' . $invoice_id . '.pdf';
+        $output_url = $upload_dir['baseurl'] . '/invoices/faktura-' . $invoice_id . '.pdf';
         return $output_url;
     } catch (\Exception $e) {
         error_log('Chyba při generování PDF: ' . $e->getMessage());
