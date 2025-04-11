@@ -27,6 +27,7 @@ if (empty($invoice_data)) {
         'amount' => '',
         'variable_symbol' => '',
         'reference_number' => '', // Přidáno referenční číslo
+        'payment_method' => 'Bankovní převod', // Výchozí hodnota
         'status' => 'Nová',
         'message' => '',
         'customer_name' => '',
@@ -41,6 +42,7 @@ $invoice_data = wp_parse_args($invoice_data, array(
     'amount' => '',
     'variable_symbol' => '',
     'reference_number' => '', // Přidáno referenční číslo
+    'payment_method' => 'Bankovní převod', // Výchozí hodnota
     'status' => 'Nová',
     'message' => '',
     'customer_name' => '',
@@ -73,6 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invoice_data'])) {
         'amount' => '',
         'variable_symbol' => '',
         'reference_number' => '', // Přidáno referenční číslo
+        'payment_method' => 'Bankovní převod', // Výchozí hodnota
         'status' => 'Nová',
         'message' => '',
         'customer_name' => '',
@@ -85,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invoice_data'])) {
     $invoice_data['amount'] = isset($_POST['invoice_data']['amount']) ? sanitize_text_field($_POST['invoice_data']['amount']) : '';
     $invoice_data['variable_symbol'] = isset($_POST['invoice_data']['variable_symbol']) ? sanitize_text_field($_POST['invoice_data']['variable_symbol']) : '';
     $invoice_data['reference_number'] = isset($_POST['invoice_data']['reference_number']) ? sanitize_text_field($_POST['invoice_data']['reference_number']) : ''; // Přidáno referenční číslo
+    $invoice_data['payment_method'] = isset($_POST['invoice_data']['payment_method']) ? sanitize_text_field($_POST['invoice_data']['payment_method']) : 'Bankovní převod'; // Výchozí hodnota
     $invoice_data['status'] = isset($_POST['invoice_data']['status']) ? sanitize_text_field($_POST['invoice_data']['status']) : '';
     $invoice_data['message'] = isset($_POST['invoice_data']['message']) ? sanitize_text_field($_POST['invoice_data']['message']) : '';
     $invoice_data['customer_name'] = isset($_POST['invoice_data']['customer_name']) ? sanitize_text_field($_POST['invoice_data']['customer_name']) : '';
@@ -264,6 +268,15 @@ get_header();
                     <tr>
                         <th><label for="invoice_reference_number">Referenční číslo</label></th> <!-- Přidáno referenční číslo -->
                         <td><input type="text" name="invoice_data[reference_number]" id="invoice_reference_number" value="<?php echo esc_attr($invoice_data['reference_number']); ?>" /></td>
+                    </tr>
+                    <tr>
+                        <th><label for="invoice_payment_method">Forma úhrady</label></th> <!-- Přidáno forma úhrady -->
+                        <td>
+                            <select name="invoice_data[payment_method]" id="invoice_payment_method">
+                                <option value="Bankovní převod" <?php selected($invoice_data['payment_method'], 'Bankovní převod'); ?>>Bankovní převod</option>
+                                <option value="Hotově" <?php selected($invoice_data['payment_method'], 'Hotově'); ?>>Hotově</option>
+                            </select>
+                        </td>
                     </tr>
                     <tr>
                         <th><label for="invoice_status">Status</label></th>

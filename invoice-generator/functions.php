@@ -110,8 +110,11 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         $html = '<table style="width: 100%; border-collapse: collapse;">';
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum vystavení:</td><td style="padding: 5px;">' . htmlspecialchars($issue_date) . '</td></tr>';
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum splatnosti:</td><td style="padding: 5px;">' . htmlspecialchars($due_date) . '</td></tr>';
-        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Číslo účtu:</td><td style="padding: 5px;">' . htmlspecialchars(get_option('invoice_generator_account_number')) . '/' . htmlspecialchars(get_option('invoice_generator_bank_code')) . '</td></tr>';
-        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Variabilní symbol:</td><td style="padding: 5px;">' . htmlspecialchars($variable_symbol) . '</td></tr>';
+        if ($invoice_data['payment_method'] === 'Bankovní převod') { // Tiskne číslo účtu pouze pro bankovní převod
+            $html .= '<tr><td style="font-weight: bold; padding: 5px;">Číslo účtu:</td><td style="padding: 5px;">' . htmlspecialchars(get_option('invoice_generator_account_number')) . '/' . htmlspecialchars(get_option('invoice_generator_bank_code')) . '</td></tr>';
+            $html .= '<tr><td style="font-weight: bold; padding: 5px;">Variabilní symbol:</td><td style="padding: 5px;">' . htmlspecialchars($variable_symbol) . '</td></tr>';
+        }
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Forma úhrady:</td><td style="padding: 5px;">' . htmlspecialchars($invoice_data['payment_method']) . '</td></tr>'; // Tiskne formu úhrady
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Referenční číslo:</td><td style="padding: 5px;">' . htmlspecialchars($reference_number) . '</td></tr>';
         $html .= '</table>';
         $pdf->writeHTML($html, true, false, true, false, '');
@@ -130,26 +133,28 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         $html .= '</table>';
         $pdf->writeHTML($html, true, false, true, false, '');
 
-        // Přidání QR kódu na stejné stránce, ale dole
-        $qr_code_url = invoice_generator_generate_qr_code($invoice_data);
-        if (!empty($qr_code_url)) {
-            $qr_code_path = download_image_to_temp($qr_code_url);
-            if ($qr_code_path) {
-                // Zajistíme, že QR kód bude na stejné stránce
-                $current_y = $pdf->GetY();
-                $page_height = $pdf->getPageHeight();
-                $bottom_margin = $pdf->getBreakMargin();
-                $qr_code_height = 50; // Výška QR kódu
+        // Přidání QR kódu na stejné stránce, ale pouze pokud je forma úhrady "Bankovní převod"
+        if ($invoice_data['payment_method'] === 'Bankovní převod') {
+            $qr_code_url = invoice_generator_generate_qr_code($invoice_data);
+            if (!empty($qr_code_url)) {
+                $qr_code_path = download_image_to_temp($qr_code_url);
+                if ($qr_code_path) {
+                    // Zajistíme, že QR kód bude na stejné stránce
+                    $current_y = $pdf->GetY();
+                    $page_height = $pdf->getPageHeight();
+                    $bottom_margin = $pdf->getBreakMargin();
+                    $qr_code_height = 50; // Výška QR kódu
 
-                // Pokud by QR kód přesáhl stránku, posuneme ho výše
-                if ($current_y + $qr_code_height + $bottom_margin > $page_height) {
-                    $pdf->SetY($page_height - $qr_code_height - $bottom_margin);
-                } else {
-                    $pdf->SetY($current_y + 10); // Přidáme mezery, pokud je místo
+                    // Pokud by QR kód přesáhl stránku, posuneme ho výše
+                    if ($current_y + $qr_code_height + $bottom_margin > $page_height) {
+                        $pdf->SetY($page_height - $qr_code_height - $bottom_margin);
+                    } else {
+                        $pdf->SetY($current_y + 10); // Přidáme mezery, pokud je místo
+                    }
+
+                    $pdf->Image($qr_code_path, 80, $pdf->GetY(), 50); // Umístění QR kódu na střed dole
+                    unlink($qr_code_path); // Smazání dočasného souboru
                 }
-
-                $pdf->Image($qr_code_path, 80, $pdf->GetY(), 50); // Umístění QR kódu na střed dole
-                unlink($qr_code_path); // Smazání dočasného souboru
             }
         }
 
