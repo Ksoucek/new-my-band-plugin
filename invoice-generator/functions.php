@@ -30,12 +30,18 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
     $supplier_address = get_option('invoice_generator_supplier_address', '');
     $supplier_phone = get_option('invoice_generator_supplier_phone', '');
     $supplier_ico = get_option('invoice_generator_supplier_ico', '');
+    // $supplier_dic = get_option('invoice_generator_supplier_dic', ''); // DIČ dodavatele (odstraněno)
 
     // Načteme údaje zákazníka z fakturačních dat
     $customer_name = isset($invoice_data['customer_name']) ? $invoice_data['customer_name'] : '';
     $customer_address = isset($invoice_data['customer_address']) ? $invoice_data['customer_address'] : '';
     $customer_phone = isset($invoice_data['customer_phone']) ? $invoice_data['customer_phone'] : '';
     $customer_ico = isset($invoice_data['customer_ico']) ? $invoice_data['customer_ico'] : '';
+    // $customer_dic = isset($invoice_data['customer_dic']) ? $invoice_data['customer_dic'] : ''; // DIČ zákazníka (odstraněno)
+
+    // Načteme další fakturační údaje
+    $variable_symbol = isset($invoice_data['variable_symbol']) ? $invoice_data['variable_symbol'] : ''; // Variabilní symbol
+    $reference_number = isset($invoice_data['reference_number']) ? $invoice_data['reference_number'] : ''; // Referenční číslo
 
     try {
         $pdf = new \TCPDF(); // Použití TCPDF z Composeru
@@ -104,9 +110,23 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         $html = '<table style="width: 100%; border-collapse: collapse;">';
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum vystavení:</td><td style="padding: 5px;">' . htmlspecialchars($issue_date) . '</td></tr>';
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum splatnosti:</td><td style="padding: 5px;">' . htmlspecialchars($due_date) . '</td></tr>';
-        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Částka:</td><td style="padding: 5px;">' . htmlspecialchars($formatted_amount) . '</td></tr>';
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Číslo účtu:</td><td style="padding: 5px;">' . htmlspecialchars(get_option('invoice_generator_account_number')) . '/' . htmlspecialchars(get_option('invoice_generator_bank_code')) . '</td></tr>';
-        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Zpráva:</td><td style="padding: 5px;">' . htmlspecialchars($invoice_data['message']) . '</td></tr>';
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Variabilní symbol:</td><td style="padding: 5px;">' . htmlspecialchars($variable_symbol) . '</td></tr>';
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Referenční číslo:</td><td style="padding: 5px;">' . htmlspecialchars($reference_number) . '</td></tr>';
+        $html .= '</table>';
+        $pdf->writeHTML($html, true, false, true, false, '');
+
+        // Oddělení částky a zprávy vizuálně s upravenou šířkou
+        $pdf->Ln(10); // Přidáme mezeru
+        $html = '<table style="width: 100%; border-collapse: collapse; border: none;">'; // Bez rámečku
+        $html .= '<tr>';
+        $html .= '<td style="width: 25%; font-weight: bold; padding: 5px;">Částka:</td>';
+        $html .= '<td style="width: 75%; font-weight: bold; text-decoration: underline; padding: 5px;">' . htmlspecialchars($formatted_amount) . '</td>';
+        $html .= '</tr>';
+        $html .= '<tr>';
+        $html .= '<td style="width: 25%; font-weight: bold; padding: 5px;">Zpráva:</td>';
+        $html .= '<td style="width: 75%; padding: 5px;">' . htmlspecialchars($invoice_data['message']) . '</td>';
+        $html .= '</tr>';
         $html .= '</table>';
         $pdf->writeHTML($html, true, false, true, false, '');
 
