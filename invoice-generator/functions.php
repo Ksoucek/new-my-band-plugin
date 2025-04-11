@@ -11,11 +11,13 @@ function invoice_generator_get_unique_invoice_number() {
 
 
 function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
-    // Kontrola, zda je TCPDF dostupná
-    if (!class_exists('\TCPDF')) {
-        error_log('TCPDF knihovna nebyla nalezena. Ujistěte se, že je správně nainstalována přes Composer.');
-        return false; // Zabráníme dalšímu zpracování
-    }
+    // Ověříme, zda je datum splatnosti platné
+    $due_date = isset($invoice_data['due_date']) && strtotime($invoice_data['due_date']) !== false
+        ? date('d.m.Y', strtotime($invoice_data['due_date'])) // Změna formátu na dd.mm.rrrr
+        : date('d.m.Y'); // Výchozí datum ve správném formátu
+
+    // Formátujeme částku na účetní formát
+    $formatted_amount = number_format($invoice_data['amount'], 2, ',', ' ') . ' Kč';
 
     try {
         $pdf = new \TCPDF(); // Použití TCPDF z Composeru
@@ -46,18 +48,32 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         // Přidání tabulky s fakturačními údaji
         $pdf->Ln(60); // Posun dolů
         $html = '<table style="width: 100%; border-collapse: collapse;">';
-        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Částka:</td><td style="padding: 5px;">' . htmlspecialchars($invoice_data['amount']) . ' Kč</td></tr>';
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Částka:</td><td style="padding: 5px;">' . htmlspecialchars($formatted_amount) . '</td></tr>'; // Použijeme formátovanou částku
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Číslo účtu:</td><td style="padding: 5px;">' . htmlspecialchars(get_option('invoice_generator_account_number')) . '/' . htmlspecialchars(get_option('invoice_generator_bank_code')) . '</td></tr>';
-        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum splatnosti:</td><td style="padding: 5px;">' . htmlspecialchars($invoice_data['due_date']) . '</td></tr>';
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum splatnosti:</td><td style="padding: 5px;">' . htmlspecialchars($due_date) . '</td></tr>'; // Použijeme datum ve formátu dd.mm.rrrr
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Zpráva:</td><td style="padding: 5px;">' . htmlspecialchars($invoice_data['message']) . '</td></tr>'; // Přidání zprávy
         $html .= '</table>';
         $pdf->writeHTML($html, true, false, true, false, '');
 
-        // Přidání QR kódu
+        // Přidání QR kódu na stejné stránce, ale dole
         $qr_code_url = invoice_generator_generate_qr_code($invoice_data);
         if (!empty($qr_code_url)) {
             $qr_code_path = download_image_to_temp($qr_code_url);
             if ($qr_code_path) {
-                $pdf->Image($qr_code_path, 10, 100, 50); // Umístění QR kódu
+                // Zajistíme, že QR kód bude na stejné stránce
+                $current_y = $pdf->GetY();
+                $page_height = $pdf->getPageHeight();
+                $bottom_margin = $pdf->getBreakMargin();
+                $qr_code_height = 50; // Výška QR kódu
+
+                // Pokud by QR kód přesáhl stránku, posuneme ho výše
+                if ($current_y + $qr_code_height + $bottom_margin > $page_height) {
+                    $pdf->SetY($page_height - $qr_code_height - $bottom_margin);
+                } else {
+                    $pdf->SetY($current_y + 10); // Přidáme mezery, pokud je místo
+                }
+
+                $pdf->Image($qr_code_path, 80, $pdf->GetY(), 50); // Umístění QR kódu na střed dole
                 unlink($qr_code_path); // Smazání dočasného souboru
             }
         }
@@ -83,6 +99,7 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         return false; // Zabráníme dalšímu zpracování
     }
 }
+
 
 function download_image_to_temp($url) {
     $temp_file = tempnam(sys_get_temp_dir(), 'img_');

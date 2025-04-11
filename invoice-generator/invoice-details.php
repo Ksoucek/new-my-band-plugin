@@ -26,19 +26,31 @@ $invoice_data = get_post_meta($invoice_id, 'invoice_data', true);
 $invoice_data = wp_parse_args($invoice_data, array(
     'amount' => '',
     'variable_symbol' => '',
-    'status' => 'Nová'
+    'status' => 'Nová',
+    'message' => ''
 ));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invoice_data'])) {
     check_admin_referer('save_invoice_details');
 
-    // Pokud číslo faktury není nastaveno, vygenerujeme nové
-    if (empty($invoice_data['invoice_number'])) {
-        $invoice_data['invoice_number'] = invoice_generator_get_unique_invoice_number();
-    }
+    // Získáme aktuální data faktury
+    $invoice_data = get_post_meta($invoice_id, 'invoice_data', true);
+    $invoice_data = wp_parse_args($invoice_data, array(
+        'amount' => '',
+        'variable_symbol' => '',
+        'status' => 'Nová',
+        'message' => ''
+    ));
 
-    update_post_meta($invoice_id, 'invoice_data', $_POST['invoice_data']);
-    $invoice_data = $_POST['invoice_data']; // Aktualizace zobrazených dat
+    // Aktualizujeme data z formuláře
+    $invoice_data['amount'] = isset($_POST['invoice_data']['amount']) ? sanitize_text_field($_POST['invoice_data']['amount']) : '';
+    $invoice_data['variable_symbol'] = isset($_POST['invoice_data']['variable_symbol']) ? sanitize_text_field($_POST['invoice_data']['variable_symbol']) : '';
+    $invoice_data['status'] = isset($_POST['invoice_data']['status']) ? sanitize_text_field($_POST['invoice_data']['status']) : '';
+    $invoice_data['message'] = isset($_POST['invoice_data']['message']) ? sanitize_text_field($_POST['invoice_data']['message']) : '';
+
+    // Uložíme aktualizovaná data
+    update_post_meta($invoice_id, 'invoice_data', $invoice_data);
+
     echo '<div class="updated"><p>Faktura byla úspěšně uložena.</p></div>';
 }
 
@@ -47,14 +59,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_qr_code'])) 
     $bank_code = get_option('invoice_generator_bank_code', '');
     $default_due_days = get_option('invoice_generator_default_due_days', 14);
     $event_date = get_post_meta($invoice_id, 'kseft_event_date', true);
-    $due_date = date('Y-m-d', strtotime($event_date . " + $default_due_days days"));
+
+    // Ověříme, zda je datum události platné
+    if (!empty($event_date) && strtotime($event_date) !== false) {
+        $due_date = date('Y-m-d', strtotime($event_date . " + $default_due_days days"));
+    } else {
+        $due_date = date('Y-m-d', strtotime("+$default_due_days days")); // Výchozí datum splatnosti
+    }
+
+    // Uložíme ověřené datum splatnosti do $invoice_data
+    $invoice_data['due_date'] = $due_date;
 
     $qr_code_data = array(
         'account_number' => $account_number,
         'bank_code' => $bank_code,
         'amount' => $invoice_data['amount'],
         'variable_symbol' => $invoice_data['variable_symbol'],
-        'due_date' => $due_date
+        'due_date' => $due_date,
+        'message' => $invoice_data['message']
     );
 
     // Uložíme data posílaná do API pro zobrazení na stránce
@@ -67,6 +89,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_qr_code'])) 
     } else {
         $invoice_data['qr_code_error'] = 'Chyba při generování QR kódu. Zkontrolujte nastavení pluginu.';
     }
+
+    // Uložíme aktualizovaná data faktury
+    update_post_meta($invoice_id, 'invoice_data', $invoice_data);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_pdf_invoice'])) {
@@ -87,6 +112,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_pdf_invoice'
 
 $qr_code_url = isset($invoice_data['qr_code_url']) ? $invoice_data['qr_code_url'] : get_post_meta($invoice_id, 'qr_code_url', true);
 $qr_code_error = isset($invoice_data['qr_code_error']) ? $invoice_data['qr_code_error'] : '';
+
+// Zobrazení data splatnosti na stránce detailu faktury
+$due_date_display = isset($invoice_data['due_date']) && strtotime($invoice_data['due_date']) !== false
+    ? date('d.m.Y', strtotime($invoice_data['due_date'])) // Změna formátu na dd.mm.rrrr
+    : '';
+
+// Formátujeme částku na účetní formát
+$formatted_amount = isset($invoice_data['amount']) ? number_format($invoice_data['amount'], 2, ',', ' ') . ' Kč' : '';
 
 get_header(); // Načtení hlavičky šablony
 ?>
@@ -120,6 +153,10 @@ get_header(); // Načtení hlavičky šablony
                     </select>
                 </td>
             </tr>
+            <tr>
+                <th><label for="invoice_message">Zpráva</label></th>
+                <td><input type="text" name="invoice_data[message]" id="invoice_message" value="<?php echo esc_attr($invoice_data['message']); ?>" /></td>
+            </tr>
         </table>
         <p class="submit">
             <button type="submit" class="button button-primary">Uložit</button>
@@ -145,6 +182,8 @@ get_header(); // Načtení hlavičky šablony
         <h2>PDF Faktura</h2>
         <a href="<?php echo esc_url($invoice_data['pdf_invoice_url']); ?>" target="_blank" class="button">Stáhnout PDF Fakturu</a>
     <?php endif; ?>
+    <p><strong>Datum splatnosti:</strong> <?php echo esc_html($due_date_display); ?></p>
+    <p><strong>Částka:</strong> <?php echo esc_html($formatted_amount); ?></p>
 </div>
 <?php
 get_footer(); // Načtení patičky šablony

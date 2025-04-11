@@ -78,29 +78,31 @@ function invoice_generator_display_invoice($content) {
 add_filter('the_content_Invoice', 'invoice_generator_display_invoice');
 
 function invoice_generator_generate_qr_code($invoice_data) {
-    // Sestavení řetězce podle specifikace QR Platba
+    $iban = get_option('invoice_generator_iban', ''); // Použijeme IBAN místo čísla účtu
+    $currency = 'CZK'; // vždy používáme CZK
     $qr_string = sprintf(
-        'SPD*1.0*ACC:%s*AM:%s*CC:CZK*X-VS:%s*DT:%s',
-        $invoice_data['account_number'] . '/' . $invoice_data['bank_code'], // Číslo účtu a kód banky
+        'SPD*1.0*ACC:%s*AM:%s*CC:%s*X-VS:%s*DT:%s',
+        $iban, // Používáme IBAN
         number_format($invoice_data['amount'], 2, '.', ''), // Částka ve formátu s desetinnou tečkou
+        $currency,
         $invoice_data['variable_symbol'], // Variabilní symbol
-        $invoice_data['due_date'] // Datum splatnosti
+        date('Ymd', strtotime($invoice_data['due_date'])) // Datum splatnosti ve formátu rrrrmmdd
     );
 
-    // URL pro generování QR kódu
+    // Debug: vypiš SPAYD string do konzole
+    echo '<script>console.log("SPAYD String: ' . esc_js($qr_string) . '");</script>';
+
     $api_url = 'https://api.qrserver.com/v1/create-qr-code/';
     $params = array(
-        'data' => $qr_string, // Data pro QR kód
-        'size' => '200x200' // Velikost QR kódu
+        'data' => $qr_string,
+        'size' => '200x200'
     );
 
-    // Odeslání požadavku na API
     $response = wp_remote_get($api_url . '?' . http_build_query($params));
     if (is_wp_error($response)) {
-        return ''; // Vrátíme prázdný řetězec v případě chyby
+        return '';
     }
 
-    // Vrátíme URL QR kódu
     return $api_url . '?' . http_build_query($params);
 }
 
@@ -164,6 +166,7 @@ function invoice_generator_register_settings() {
     register_setting('invoice_generator_settings_group', 'invoice_generator_bank_code'); // Kód banky
     register_setting('invoice_generator_settings_group', 'invoice_generator_default_due_days'); // Výchozí splatnost
     register_setting('invoice_generator_settings_group', 'invoice_generator_logo'); // Logo
+    register_setting('invoice_generator_settings_group', 'invoice_generator_iban'); // IBAN
 
     add_settings_section(
         'invoice_generator_settings_section',
@@ -211,6 +214,14 @@ function invoice_generator_register_settings() {
         'invoice-generator-settings',
         'invoice_generator_settings_section'
     );
+    
+    add_settings_field(
+    'invoice_generator_iban',
+    'IBAN',
+    'invoice_generator_iban_callback',
+    'invoice-generator-settings',
+    'invoice_generator_settings_section'
+);
 }
 add_action('admin_init', 'invoice_generator_register_settings'); // Správné volání pro registraci nastavení
 
@@ -252,6 +263,13 @@ function invoice_generator_logo_callback() {
             <img src="<?php echo esc_url($logo_url); ?>" alt="Logo" style="max-width: 200px;">
         <?php endif; ?>
     </div>
+    <?php
+}
+
+function invoice_generator_iban_callback() {
+    $iban = get_option('invoice_generator_iban', '');
+    ?>
+    <input type="text" name="invoice_generator_iban" value="<?php echo esc_attr($iban); ?>" size="50">
     <?php
 }
 
