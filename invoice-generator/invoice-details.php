@@ -221,7 +221,31 @@ get_header();
         outline: none;
         box-shadow: 0 0 5px rgb(20, 20, 20); /* Zvýraznění při zaostření */
     }
+    /* Červený rámeček pro neuložená pole */
+    .unsaved {
+        border: 2px solid red !important;
+    }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('form');
+        const inputs = form.querySelectorAll('input, textarea, select');
+
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.add('unsaved'); // Přidá červený rámeček při změně
+            });
+        });
+
+        form.addEventListener('submit', () => {
+            inputs.forEach(input => {
+                input.classList.remove('unsaved'); // Odebere červený rámeček po uložení
+            });
+        });
+    });
+</script>
+
 <div class="wrap">
     <h1>Detail Faktury <?php echo esc_html($invoice_id); ?><?php if (!empty($event_title)): ?> - <?php echo esc_html($event_title); ?><?php endif; ?></h1>
     <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 20px;">
@@ -263,7 +287,7 @@ get_header();
                     </tr>
                     <tr>
                         <th><label for="invoice_variable_symbol">Variabilní symbol</label></th>
-                        <td><input type="text" name="invoice_data[variable_symbol]" id="invoice_variable_symbol" value="<?php echo esc_attr($invoice_data['variable_symbol']); ?>" /></td>
+                        <td><input type="text" name="invoice_data[variable_symbol]" id="invoice_variable_symbol" value="<?php echo esc_attr($invoice_data['variable_symbol']); ?>" maxlength="10" required pattern=".{1,10}" title="Pole musí mít maximálně 10 znaků." /></td> <!-- Přidán atribut maxlength, required a pattern -->
                     </tr>
                     <tr>
                         <th><label for="invoice_reference_number">Referenční číslo</label></th> <!-- Přidáno referenční číslo -->

@@ -27,13 +27,16 @@ function invoice_generator_render_meta_box($post) {
     $invoice_data = get_post_meta($post->ID, 'invoice_data', true);
     $invoice_data = wp_parse_args($invoice_data, array(
         'amount' => '',
-        'variable_symbol' => ''
+        'variable_symbol' => '',
+        'message' => ''
     ));
     ?>
     <label for="invoice_amount">Částka:</label>
     <input type="number" name="invoice_data[amount]" id="invoice_amount" value="<?php echo esc_attr($invoice_data['amount']); ?>" step="0.01" /><br><br>
     <label for="invoice_variable_symbol">Variabilní symbol:</label>
     <input type="text" name="invoice_data[variable_symbol]" id="invoice_variable_symbol" value="<?php echo esc_attr($invoice_data['variable_symbol']); ?>" /><br><br>
+    <label for="invoice_message">Zpráva:</label>
+    <input type="text" name="invoice_data[message]" id="invoice_message" value="<?php echo esc_attr($invoice_data['message']); ?>" /><br><br>
     <?php
 }
 
@@ -80,12 +83,15 @@ add_filter('the_content_Invoice', 'invoice_generator_display_invoice');
 function invoice_generator_generate_qr_code($invoice_data) {
     $iban = get_option('invoice_generator_iban', ''); // Použijeme IBAN místo čísla účtu
     $currency = 'CZK'; // vždy používáme CZK
+    $message = isset($invoice_data['message']) ? mb_substr($invoice_data['message'], 0, 140) : ''; // Získáme zprávu a ořízneme na 140 znaků
+
     $qr_string = sprintf(
-        'SPD*1.0*ACC:%s*AM:%s*CC:%s*X-VS:%s*DT:%s',
+        'SPD*1.0*ACC:%s*AM:%s*CC:%s*X-VS:%s*MSG:%s*DT:%s',
         $iban, // Používáme IBAN
         number_format($invoice_data['amount'], 2, '.', ''), // Částka ve formátu s desetinnou tečkou
         $currency,
         $invoice_data['variable_symbol'], // Variabilní symbol
+        $message, // Přidáme zprávu
         date('Ymd', strtotime($invoice_data['due_date'])) // Datum splatnosti ve formátu rrrrmmdd
     );
 
