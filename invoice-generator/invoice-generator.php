@@ -167,6 +167,10 @@ function invoice_generator_register_settings() {
     register_setting('invoice_generator_settings_group', 'invoice_generator_default_due_days'); // Výchozí splatnost
     register_setting('invoice_generator_settings_group', 'invoice_generator_logo'); // Logo
     register_setting('invoice_generator_settings_group', 'invoice_generator_iban'); // IBAN
+    register_setting('invoice_generator_settings_group', 'invoice_generator_supplier_name'); // Název dodavatele
+    register_setting('invoice_generator_settings_group', 'invoice_generator_supplier_address'); // Adresa dodavatele
+    register_setting('invoice_generator_settings_group', 'invoice_generator_supplier_phone'); // Telefon dodavatele
+    register_setting('invoice_generator_settings_group', 'invoice_generator_supplier_ico'); // IČO dodavatele
 
     add_settings_section(
         'invoice_generator_settings_section',
@@ -216,12 +220,44 @@ function invoice_generator_register_settings() {
     );
     
     add_settings_field(
-    'invoice_generator_iban',
-    'IBAN',
-    'invoice_generator_iban_callback',
-    'invoice-generator-settings',
-    'invoice_generator_settings_section'
-);
+        'invoice_generator_iban',
+        'IBAN',
+        'invoice_generator_iban_callback',
+        'invoice-generator-settings',
+        'invoice_generator_settings_section'
+    );
+
+    add_settings_field(
+        'invoice_generator_supplier_name',
+        'Název dodavatele',
+        'invoice_generator_supplier_name_callback',
+        'invoice-generator-settings',
+        'invoice_generator_settings_section'
+    );
+
+    add_settings_field(
+        'invoice_generator_supplier_address',
+        'Adresa dodavatele',
+        'invoice_generator_supplier_address_callback',
+        'invoice-generator-settings',
+        'invoice_generator_settings_section'
+    );
+
+    add_settings_field(
+        'invoice_generator_supplier_phone',
+        'Telefon dodavatele',
+        'invoice_generator_supplier_phone_callback',
+        'invoice-generator-settings',
+        'invoice_generator_settings_section'
+    );
+
+    add_settings_field(
+        'invoice_generator_supplier_ico',
+        'IČO dodavatele',
+        'invoice_generator_supplier_ico_callback',
+        'invoice-generator-settings',
+        'invoice_generator_settings_section'
+    );
 }
 add_action('admin_init', 'invoice_generator_register_settings'); // Správné volání pro registraci nastavení
 
@@ -270,6 +306,34 @@ function invoice_generator_iban_callback() {
     $iban = get_option('invoice_generator_iban', '');
     ?>
     <input type="text" name="invoice_generator_iban" value="<?php echo esc_attr($iban); ?>" size="50">
+    <?php
+}
+
+function invoice_generator_supplier_name_callback() {
+    $supplier_name = get_option('invoice_generator_supplier_name', '');
+    ?>
+    <input type="text" name="invoice_generator_supplier_name" value="<?php echo esc_attr($supplier_name); ?>" size="50">
+    <?php
+}
+
+function invoice_generator_supplier_address_callback() {
+    $supplier_address = get_option('invoice_generator_supplier_address', '');
+    ?>
+    <input type="text" name="invoice_generator_supplier_address" value="<?php echo esc_attr($supplier_address); ?>" size="50">
+    <?php
+}
+
+function invoice_generator_supplier_phone_callback() {
+    $supplier_phone = get_option('invoice_generator_supplier_phone', '');
+    ?>
+    <input type="text" name="invoice_generator_supplier_phone" value="<?php echo esc_attr($supplier_phone); ?>" size="50">
+    <?php
+}
+
+function invoice_generator_supplier_ico_callback() {
+    $supplier_ico = get_option('invoice_generator_supplier_ico', '');
+    ?>
+    <input type="text" name="invoice_generator_supplier_ico" value="<?php echo esc_attr($supplier_ico); ?>" size="50">
     <?php
 }
 

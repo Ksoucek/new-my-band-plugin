@@ -13,11 +13,29 @@ function invoice_generator_get_unique_invoice_number() {
 function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
     // Ověříme, zda je datum splatnosti platné
     $due_date = isset($invoice_data['due_date']) && strtotime($invoice_data['due_date']) !== false
-        ? date('d.m.Y', strtotime($invoice_data['due_date'])) // Změna formátu na dd.mm.rrrr
-        : date('d.m.Y'); // Výchozí datum ve správném formátu
+        ? date('d.m.Y', strtotime($invoice_data['due_date']))
+        : date('d.m.Y'); // Výchozí datum splatnosti
+
+    // Získáme datum akce/kšeftu na základě čísla faktury (ID kšeftu)
+    $event_date = get_post_meta($invoice_id, 'kseft_event_date', true);
+    $issue_date = !empty($event_date) && strtotime($event_date) !== false
+        ? date('d.m.Y', strtotime($event_date)) // Datum vystavení = datum akce
+        : date('d.m.Y'); // Výchozí datum, pokud není datum akce dostupné
 
     // Formátujeme částku na účetní formát
     $formatted_amount = number_format($invoice_data['amount'], 2, ',', ' ') . ' Kč';
+
+    // Načteme údaje dodavatele z nastavení
+    $supplier_name = get_option('invoice_generator_supplier_name', '');
+    $supplier_address = get_option('invoice_generator_supplier_address', '');
+    $supplier_phone = get_option('invoice_generator_supplier_phone', '');
+    $supplier_ico = get_option('invoice_generator_supplier_ico', '');
+
+    // Načteme údaje zákazníka z fakturačních dat
+    $customer_name = isset($invoice_data['customer_name']) ? $invoice_data['customer_name'] : '';
+    $customer_address = isset($invoice_data['customer_address']) ? $invoice_data['customer_address'] : '';
+    $customer_phone = isset($invoice_data['customer_phone']) ? $invoice_data['customer_phone'] : '';
+    $customer_ico = isset($invoice_data['customer_ico']) ? $invoice_data['customer_ico'] : '';
 
     try {
         $pdf = new \TCPDF(); // Použití TCPDF z Composeru
@@ -45,13 +63,50 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         $pdf->Cell(0, 10, 'Faktura - číslo: ' . $invoice_id, 0, 1, 'C');
         $pdf->SetFont('dejavusans', '', 10);
 
+        // Přidání tabulky pro dodavatele a zákazníka
+        $pdf->Ln(15); // Posuneme tabulku níže
+        $html = '<table style="width: 100%; border-collapse: collapse; border: 1px solid #fff;">'; // Bílé čáry tabulky
+        $html .= '<tr>';
+        $html .= '<th style="width: 25%; text-align: left; border: 1px solid #fff; padding: 5px; font-weight: bold;">Dodavatel</th>';
+        $html .= '<th style="width: 25%; text-align: left; border: 1px solid #fff; padding: 5px;"></th>';
+        $html .= '<th style="width: 25%; text-align: left; border: 1px solid #fff; padding: 5px; font-weight: bold;">Zákazník</th>';
+        $html .= '<th style="width: 25%; text-align: left; border: 1px solid #fff; padding: 5px;"></th>';
+        $html .= '</tr>';
+        $html .= '<tr>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">Název</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">' . htmlspecialchars($supplier_name) . '</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">Název</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">' . htmlspecialchars($customer_name) . '</td>';
+        $html .= '</tr>';
+        $html .= '<tr>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">Adresa</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">' . htmlspecialchars($supplier_address) . '</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">Adresa</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">' . htmlspecialchars($customer_address) . '</td>';
+        $html .= '</tr>';
+        $html .= '<tr>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">Telefon</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">' . htmlspecialchars($supplier_phone) . '</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">Telefon</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">' . htmlspecialchars($customer_phone) . '</td>';
+        $html .= '</tr>';
+        $html .= '<tr>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">IČO</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">' . htmlspecialchars($supplier_ico) . '</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">IČO</td>';
+        $html .= '<td style="border: 1px solid #fff; padding: 5px;">' . htmlspecialchars($customer_ico) . '</td>';
+        $html .= '</tr>';
+        $html .= '</table>';
+        $pdf->writeHTML($html, true, false, true, false, '');
+
         // Přidání tabulky s fakturačními údaji
-        $pdf->Ln(60); // Posun dolů
+        $pdf->Ln(10);
         $html = '<table style="width: 100%; border-collapse: collapse;">';
-        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Částka:</td><td style="padding: 5px;">' . htmlspecialchars($formatted_amount) . '</td></tr>'; // Použijeme formátovanou částku
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum vystavení:</td><td style="padding: 5px;">' . htmlspecialchars($issue_date) . '</td></tr>';
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum splatnosti:</td><td style="padding: 5px;">' . htmlspecialchars($due_date) . '</td></tr>';
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Částka:</td><td style="padding: 5px;">' . htmlspecialchars($formatted_amount) . '</td></tr>';
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Číslo účtu:</td><td style="padding: 5px;">' . htmlspecialchars(get_option('invoice_generator_account_number')) . '/' . htmlspecialchars(get_option('invoice_generator_bank_code')) . '</td></tr>';
-        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum splatnosti:</td><td style="padding: 5px;">' . htmlspecialchars($due_date) . '</td></tr>'; // Použijeme datum ve formátu dd.mm.rrrr
-        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Zpráva:</td><td style="padding: 5px;">' . htmlspecialchars($invoice_data['message']) . '</td></tr>'; // Přidání zprávy
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Zpráva:</td><td style="padding: 5px;">' . htmlspecialchars($invoice_data['message']) . '</td></tr>';
         $html .= '</table>';
         $pdf->writeHTML($html, true, false, true, false, '');
 

@@ -27,7 +27,11 @@ $invoice_data = wp_parse_args($invoice_data, array(
     'amount' => '',
     'variable_symbol' => '',
     'status' => 'Nová',
-    'message' => ''
+    'message' => '',
+    'customer_name' => '',
+    'customer_address' => '',
+    'customer_phone' => '',
+    'customer_ico' => ''
 ));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invoice_data'])) {
@@ -39,7 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invoice_data'])) {
         'amount' => '',
         'variable_symbol' => '',
         'status' => 'Nová',
-        'message' => ''
+        'message' => '',
+        'customer_name' => '',
+        'customer_address' => '',
+        'customer_phone' => '',
+        'customer_ico' => ''
     ));
 
     // Aktualizujeme data z formuláře
@@ -47,6 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invoice_data'])) {
     $invoice_data['variable_symbol'] = isset($_POST['invoice_data']['variable_symbol']) ? sanitize_text_field($_POST['invoice_data']['variable_symbol']) : '';
     $invoice_data['status'] = isset($_POST['invoice_data']['status']) ? sanitize_text_field($_POST['invoice_data']['status']) : '';
     $invoice_data['message'] = isset($_POST['invoice_data']['message']) ? sanitize_text_field($_POST['invoice_data']['message']) : '';
+    $invoice_data['customer_name'] = isset($_POST['invoice_data']['customer_name']) ? sanitize_text_field($_POST['invoice_data']['customer_name']) : '';
+    $invoice_data['customer_address'] = isset($_POST['invoice_data']['customer_address']) ? sanitize_text_field($_POST['invoice_data']['customer_address']) : '';
+    $invoice_data['customer_phone'] = isset($_POST['invoice_data']['customer_phone']) ? sanitize_text_field($_POST['invoice_data']['customer_phone']) : '';
+    $invoice_data['customer_ico'] = isset($_POST['invoice_data']['customer_ico']) ? sanitize_text_field($_POST['invoice_data']['customer_ico']) : '';
 
     // Uložíme aktualizovaná data
     update_post_meta($invoice_id, 'invoice_data', $invoice_data);
@@ -128,6 +140,27 @@ get_header(); // Načtení hlavičky šablony
         background-color: #f9f9f9; /* Nastavení výchozího pozadí */
         background-image: none; /* Zrušení obrázku na pozadí */
     }
+    .invoice-buttons {
+        display: flex;
+        gap: 10px; /* Mezera mezi tlačítky */
+        margin-top: 20px;
+    }
+    .invoice-buttons form {
+        margin: 0; /* Zrušení výchozího okraje formulářů */
+    }
+    .invoice-sections {
+        display: flex;
+        gap: 20px; /* Mezera mezi sekcemi */
+        margin-top: 30px;
+    }
+    .invoice-section {
+        flex: 1; /* Každá sekce zabírá stejnou šířku */
+        text-align: center; /* Zarovnání obsahu na střed */
+    }
+    .invoice-section img {
+        max-width: 100%; /* Obrázek QR kódu se přizpůsobí šířce sekce */
+        height: auto;
+    }
 </style>
 <div class="wrap">
     <h1>Detail Faktury  <?php echo esc_html($invoice_id); ?></h1>
@@ -157,33 +190,57 @@ get_header(); // Načtení hlavičky šablony
                 <th><label for="invoice_message">Zpráva</label></th>
                 <td><input type="text" name="invoice_data[message]" id="invoice_message" value="<?php echo esc_attr($invoice_data['message']); ?>" /></td>
             </tr>
+            <tr>
+                <th><label for="invoice_customer_name">Jméno zákazníka</label></th>
+                <td><input type="text" name="invoice_data[customer_name]" id="invoice_customer_name" value="<?php echo esc_attr($invoice_data['customer_name']); ?>" /></td>
+            </tr>
+            <tr>
+                <th><label for="invoice_customer_address">Adresa zákazníka</label></th>
+                <td><input type="text" name="invoice_data[customer_address]" id="invoice_customer_address" value="<?php echo esc_attr($invoice_data['customer_address']); ?>" /></td>
+            </tr>
+            <tr>
+                <th><label for="invoice_customer_phone">Telefon zákazníka</label></th>
+                <td><input type="text" name="invoice_data[customer_phone]" id="invoice_customer_phone" value="<?php echo esc_attr($invoice_data['customer_phone']); ?>" /></td>
+            </tr>
+            <tr>
+                <th><label for="invoice_customer_ico">IČO zákazníka</label></th>
+                <td><input type="text" name="invoice_data[customer_ico]" id="invoice_customer_ico" value="<?php echo esc_attr($invoice_data['customer_ico']); ?>" /></td>
+            </tr>
         </table>
-        <p class="submit">
+        <div class="invoice-buttons">
             <button type="submit" class="button button-primary">Uložit</button>
-        </p>
+        </div>
     </form>
-    <form method="post">
-        <?php wp_nonce_field('generate_qr_code'); ?>
-        <input type="hidden" name="generate_qr_code" value="1">
-        <button type="submit" class="button">Vygenerovat QR kód</button>
-    </form>
-    <form method="post">
-        <?php wp_nonce_field('generate_pdf_invoice'); ?>
-        <input type="hidden" name="generate_pdf_invoice" value="1">
-        <button type="submit" class="button">Vygenerovat PDF Fakturu</button>
-    </form>
-    <?php if (!empty($qr_code_url)): ?>
-        <h2>QR Kód</h2>
-        <img src="<?php echo esc_url($qr_code_url); ?>" alt="QR Kód">
-    <?php elseif (!empty($qr_code_error)): ?>
-        <p style="color: red;"><?php echo esc_html($qr_code_error); ?></p>
-    <?php endif; ?>
-    <?php if (!empty($invoice_data['pdf_invoice_url'])): ?>
-        <h2>PDF Faktura</h2>
-        <a href="<?php echo esc_url($invoice_data['pdf_invoice_url']); ?>" target="_blank" class="button">Stáhnout PDF Fakturu</a>
-    <?php endif; ?>
-    <p><strong>Datum splatnosti:</strong> <?php echo esc_html($due_date_display); ?></p>
-    <p><strong>Částka:</strong> <?php echo esc_html($formatted_amount); ?></p>
+    <div class="invoice-buttons">
+        <form method="post">
+            <?php wp_nonce_field('generate_qr_code'); ?>
+            <input type="hidden" name="generate_qr_code" value="1">
+            <button type="submit" class="button">Vygenerovat QR kód</button>
+        </form>
+        <form method="post">
+            <?php wp_nonce_field('generate_pdf_invoice'); ?>
+            <input type="hidden" name="generate_pdf_invoice" value="1">
+            <button type="submit" class="button">Vygenerovat PDF Fakturu</button>
+        </form>
+    </div>
+    <div class="invoice-sections">
+        <?php if (!empty($qr_code_url)): ?>
+            <div class="invoice-section">
+                <h2>QR Kód</h2>
+                <img src="<?php echo esc_url($qr_code_url); ?>" alt="QR Kód">
+            </div>
+        <?php elseif (!empty($qr_code_error)): ?>
+            <div class="invoice-section">
+                <p style="color: red;"><?php echo esc_html($qr_code_error); ?></p>
+            </div>
+        <?php endif; ?>
+        <?php if (!empty($invoice_data['pdf_invoice_url'])): ?>
+            <div class="invoice-section">
+                <h2>PDF Faktura</h2>
+                <a href="<?php echo esc_url($invoice_data['pdf_invoice_url']); ?>" target="_blank" class="button">Stáhnout PDF Fakturu</a>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
 <?php
 get_footer(); // Načtení patičky šablony
