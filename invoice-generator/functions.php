@@ -11,16 +11,20 @@ function invoice_generator_get_unique_invoice_number() {
 
 
 function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
-    // Ověříme, zda je datum splatnosti platné
-    $due_date = isset($invoice_data['due_date']) && strtotime($invoice_data['due_date']) !== false
-        ? date('d.m.Y', strtotime($invoice_data['due_date']))
-        : date('d.m.Y'); // Výchozí datum splatnosti
-
     // Získáme datum akce/kšeftu na základě čísla faktury (ID kšeftu)
     $event_date = get_post_meta($invoice_id, 'kseft_event_date', true);
     $issue_date = !empty($event_date) && strtotime($event_date) !== false
         ? date('d.m.Y', strtotime($event_date)) // Datum vystavení = datum akce
         : date('d.m.Y'); // Výchozí datum, pokud není datum akce dostupné
+
+    // Nastavíme datum splatnosti
+    if ($invoice_data['payment_method'] === 'Hotově') {
+        $due_date = $issue_date; // Pro hotovostní platbu je datum splatnosti stejné jako datum vystavení
+    } else {
+        $due_date = isset($invoice_data['due_date']) && strtotime($invoice_data['due_date']) !== false
+            ? date('d.m.Y', strtotime($invoice_data['due_date']))
+            : date('d.m.Y'); // Výchozí datum splatnosti
+    }
 
     // Formátujeme částku na účetní formát
     $formatted_amount = number_format($invoice_data['amount'], 2, ',', ' ') . ' Kč';
@@ -110,11 +114,11 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         $html = '<table style="width: 100%; border-collapse: collapse;">';
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum vystavení:</td><td style="padding: 5px;">' . htmlspecialchars($issue_date) . '</td></tr>';
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Datum splatnosti:</td><td style="padding: 5px;">' . htmlspecialchars($due_date) . '</td></tr>';
+        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Forma úhrady:</td><td style="padding: 5px;">' . htmlspecialchars($invoice_data['payment_method']) . '</td></tr>'; // Tiskne formu úhrady
         if ($invoice_data['payment_method'] === 'Bankovní převod') { // Tiskne číslo účtu pouze pro bankovní převod
             $html .= '<tr><td style="font-weight: bold; padding: 5px;">Číslo účtu:</td><td style="padding: 5px;">' . htmlspecialchars(get_option('invoice_generator_account_number')) . '/' . htmlspecialchars(get_option('invoice_generator_bank_code')) . '</td></tr>';
             $html .= '<tr><td style="font-weight: bold; padding: 5px;">Variabilní symbol:</td><td style="padding: 5px;">' . htmlspecialchars($variable_symbol) . '</td></tr>';
         }
-        $html .= '<tr><td style="font-weight: bold; padding: 5px;">Forma úhrady:</td><td style="padding: 5px;">' . htmlspecialchars($invoice_data['payment_method']) . '</td></tr>'; // Tiskne formu úhrady
         $html .= '<tr><td style="font-weight: bold; padding: 5px;">Referenční číslo:</td><td style="padding: 5px;">' . htmlspecialchars($reference_number) . '</td></tr>';
         $html .= '</table>';
         $pdf->writeHTML($html, true, false, true, false, '');
