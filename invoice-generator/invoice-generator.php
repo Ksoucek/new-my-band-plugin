@@ -268,9 +268,9 @@ function invoice_generator_register_settings() {
 add_action('admin_init', 'invoice_generator_register_settings'); // Správné volání pro registraci nastavení
 
 function invoice_generator_password_callback() {
-    $password = get_option('invoice_generator_password', '');
+    $Invoicepassword = get_option('invoice_generator_password', '');
     ?>
-    <input type="password" name="invoice_generator_password" value="<?php echo esc_attr($password); ?>" size="50">
+    <input type="password" name="invoice_generator_password" value="<?php echo esc_attr($Invoicepassword); ?>" size="50">
     <?php
 }
 
@@ -345,20 +345,20 @@ function invoice_generator_supplier_ico_callback() {
 
 function invoice_generator_protect_pages() {
     if (is_page_template('invoice-overview.php') || is_page_template('invoice-details.php')) {
-        $password = get_option('invoice_generator_password', '');
-        if (empty($password)) {
+        $Invoicepassword = get_option('invoice_generator_password', '');
+        if (empty($Invoicepassword)) {
             return; // Pokud není heslo nastaveno, stránka není chráněna
         }
 
         // Pokud je heslo již uloženo v cookie, nevyžadujeme ho znovu
-        if (isset($_COOKIE['invoice_generator_access']) && $_COOKIE['invoice_generator_access'] === md5($password)) {
+        if (isset($_COOKIE['invoice_generator_access']) && $_COOKIE['invoice_generator_access'] === md5($Invoicepassword)) {
             return;
         }
 
         // Pokud heslo nebylo zadáno, zobrazíme formulář
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invoice_generator_password'])) {
-            if ($_POST['invoice_generator_password'] === $password) {
-                setcookie('invoice_generator_access', md5($password), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+            if ($_POST['invoice_generator_password'] === $Invoicepassword) {
+                setcookie('invoice_generator_access', md5($Invoicepassword), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
                 wp_redirect($_SERVER['REQUEST_URI']);
                 exit;
             } else {
