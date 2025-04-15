@@ -25,30 +25,30 @@ $invoice_data = get_post_meta($invoice_id, 'invoice_data', true);
 if (empty($invoice_data)) {
     $invoice_data = array(
         'amount' => '',
-        'variable_symbol' => '',
+        'variable_symbol' => $invoice_id, // Výchozí číslo kšeftu/faktury
         'reference_number' => '', // Přidáno referenční číslo
         'payment_method' => 'Bankovní převod', // Výchozí hodnota
         'status' => 'Nová',
         'message' => '',
-        'customer_name' => '',
-        'customer_address' => '',
-        'customer_phone' => '',
-        'customer_ico' => ''
+        'customer_name' => '', // Odběratel – jméno
+        'customer_address' => '', // Odběratel – adresa
+        'customer_phone' => '', // Odběratel – telefon
+        'customer_ico' => '' // Odběratel – IČO
     );
     update_post_meta($invoice_id, 'invoice_data', $invoice_data);
 }
 
 $invoice_data = wp_parse_args($invoice_data, array(
     'amount' => '',
-    'variable_symbol' => '',
+    'variable_symbol' => $invoice_id, // Výchozí číslo kšeftu/faktury
     'reference_number' => '', // Přidáno referenční číslo
     'payment_method' => 'Bankovní převod', // Výchozí hodnota
     'status' => 'Nová',
     'message' => '',
-    'customer_name' => '',
-    'customer_address' => '',
-    'customer_phone' => '',
-    'customer_ico' => ''
+    'customer_name' => '', // Odběratel – jméno
+    'customer_address' => '', // Odběratel – adresa
+    'customer_phone' => '', // Odběratel – telefon
+    'customer_ico' => '' // Odběratel – IČO
 ));
 
 // Získání názvu kšeftu
@@ -73,15 +73,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invoice_data'])) {
     $invoice_data = get_post_meta($invoice_id, 'invoice_data', true);
     $invoice_data = wp_parse_args($invoice_data, array(
         'amount' => '',
-        'variable_symbol' => '',
+        'variable_symbol' => $invoice_id, // Výchozí číslo kšeftu/faktury
         'reference_number' => '', // Přidáno referenční číslo
         'payment_method' => 'Bankovní převod', // Výchozí hodnota
         'status' => 'Nová',
         'message' => '',
-        'customer_name' => '',
-        'customer_address' => '',
-        'customer_phone' => '',
-        'customer_ico' => ''
+        'customer_name' => '', // Odběratel – jméno
+        'customer_address' => '', // Odběratel – adresa
+        'customer_phone' => '', // Odběratel – telefon
+        'customer_ico' => '' // Odběratel – IČO
     ));
 
     // Aktualizujeme data z formuláře
@@ -308,6 +308,17 @@ get_header();
                 }
             }
         });
+
+        // Přidáno: automatické doplnění pole Variabilní symbol číslem faktury, pokud není vyplněno při zadání částky.
+        var invoiceAmount = document.getElementById('invoice_amount');
+        var invoiceVariableSymbol = document.getElementById('invoice_variable_symbol');
+        if (invoiceAmount && invoiceVariableSymbol) {
+            invoiceAmount.addEventListener('blur', function() {
+                if (invoiceVariableSymbol.value.trim() === '') {
+                    invoiceVariableSymbol.value = "<?php echo esc_js($invoice_id); ?>";
+                }
+            });
+        }
     });
 </script>
 
@@ -385,25 +396,25 @@ get_header();
             <div style="flex: 1;">
                 <table class="form-table">
                     <tr>
-                        <th><label for="invoice_customer_ico">IČO zákazníka</label></th>
+                        <th><label for="invoice_customer_ico">IČO odběratele</label></th>
                         <td>
                             <input type="text" name="invoice_data[customer_ico]" id="invoice_customer_ico" value="<?php echo esc_attr($invoice_data['customer_ico']); ?>" />
                         </td>
                     </tr>
                     <tr>
-                        <th><label for="invoice_customer_name">Jméno zákazníka</label></th>
+                        <th><label for="invoice_customer_name">Jméno odběratele</label></th>
                         <td>
                             <input type="text" name="invoice_data[customer_name]" id="invoice_customer_name" value="<?php echo esc_attr($invoice_data['customer_name']); ?>" />
                         </td>
                     </tr>
                     <tr>
-                        <th><label for="invoice_customer_address">Adresa zákazníka</label></th>
+                        <th><label for="invoice_customer_address">Adresa odběratele</label></th>
                         <td>
                             <input type="text" name="invoice_data[customer_address]" id="invoice_customer_address" value="<?php echo esc_attr($invoice_data['customer_address']); ?>" />
                         </td>
                     </tr>
                     <tr>
-                        <th><label for="invoice_customer_phone">Telefon zákazníka</label></th>
+                        <th><label for="invoice_customer_phone">Telefon odběratele</label></th>
                         <td><input type="text" name="invoice_data[customer_phone]" id="invoice_customer_phone" value="<?php echo esc_attr($invoice_data['customer_phone']); ?>" /></td>
                     </tr>
                 </table>

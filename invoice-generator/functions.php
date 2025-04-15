@@ -79,7 +79,7 @@ function invoice_generator_generate_pdf($invoice_id, $invoice_data) {
         $html .= '<tr>';
         $html .= '<th style="width: 25%; text-align: left; border: 1px solid #fff; padding: 5px; font-weight: bold;">Dodavatel</th>';
         $html .= '<th style="width: 25%; text-align: left; border: 1px solid #fff; padding: 5px;"></th>';
-        $html .= '<th style="width: 25%; text-align: left; border: 1px solid #fff; padding: 5px; font-weight: bold;">Zákazník</th>';
+        $html .= '<th style="width: 25%; text-align: left; border: 1px solid #fff; padding: 5px; font-weight: bold;">Odběratel</th>';
         $html .= '<th style="width: 25%; text-align: left; border: 1px solid #fff; padding: 5px;"></th>';
         $html .= '</tr>';
         $html .= '<tr>';
