@@ -9,6 +9,14 @@ jQuery(document).ready(function($) {
             return; // Ukončení funkce
         }
 
+        // Přidáno: kontrola, zda je end menší nebo roven start (přes noc)
+        var startDate = new Date(eventDetails.start.dateTime);
+        var endDate = new Date(eventDetails.end.dateTime);
+        if (endDate <= startDate) {
+            endDate.setDate(endDate.getDate() + 1);
+            eventDetails.end.dateTime = endDate.toISOString().split('.')[0] + "Z";
+        }
+
         var action = googleEventId ? 'update_google_calendar_event' : 'add_google_calendar_event'; // Určení akce (přidání nebo aktualizace události)
         var ajaxUrl = googleEventId ? myTeamPlugin.ajax_url : myTeamPlugin.rest_url; // Určení URL pro AJAX požadavek
 
@@ -77,19 +85,48 @@ jQuery(document).ready(function($) {
         return textarea.value;
     }
 
+    // Nová pomocná funkce pro formátování datumu s offsetem pro Europe/Prague
+    function formatDateTimeWithOffset(dateObj, timeZone) {
+        // Použijeme Intl.DateTimeFormat k získání částí formátu
+        const formatter = new Intl.DateTimeFormat('sv-SE', {
+            timeZone: timeZone,
+            hour12: false,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        const parts = formatter.formatToParts(dateObj);
+        let year, month, day, hour, minute, second;
+        parts.forEach(part => {
+            switch(part.type) {
+                case 'year': year = part.value; break;
+                case 'month': month = part.value; break;
+                case 'day': day = part.value; break;
+                case 'hour': hour = part.value; break;
+                case 'minute': minute = part.value; break;
+                case 'second': second = part.value; break;
+            }
+        });
+        // Jednoduchá logika – předpokládáme, že měsíc mezi dubnem a říjnem je letní čas (+02:00)
+        const monthInt = parseInt(month, 10);
+        const offset = (monthInt >= 4 && monthInt <= 10) ? '+02:00' : '+01:00';
+        return `${year}-${month}-${day}T${hour}:${minute}:${second}${offset}`;
+    }
+
     function addToCalendarButtonHandler() {
-        console.log('Add to Calendar button clicked'); // Logování kliknutí na tlačítko
+        console.log('Add to Calendar button clicked'); // Logování kliknutí
         var kseftId = $('#kseft_id').val(); // Získání ID kšeftu
-
         if (!kseftId) { // Kontrola, zda je kseftId k dispozici
-            console.error('Missing kseft_id'); // Logování chyby
-            alert('Chyba: kseft_id není k dispozici.'); // Zobrazení chybové zprávy
-            return; // Ukončení funkce
+            console.error('Missing kseft_id');
+            alert('Chyba: kseft_id není k dispozici.');
+            return;
         }
-
         $.post(myTeamPlugin.ajax_url, {
             action: 'get_event_details', // Akce pro získání detailů události
-            kseft_id: kseftId // ID kšeftu
+            kseft_id: kseftId
         }, function(response) {
             if (response.success) {
                 var eventDate = response.data.event_date; // Datum události
@@ -97,86 +134,81 @@ jQuery(document).ready(function($) {
                 var endTime = response.data.performance_end; // Konec vystoupení
                 var kseftName = response.data.kseft_name; // Název kšeftu
                 var kseftLocation = response.data.kseft_location; // Lokace kšeftu
-                var kseftDescription = response.data.kseft_description; // Popis kšeftu
-
+                var kseftDescription = response.data.kseft_description; // Popis události
                 var eventDetails = {
-                    summary: decodeHtmlEntities(kseftName), // Dekódování názvu události
-                    location: decodeHtmlEntities(kseftLocation), // Dekódování lokace události
-                    description: kseftDescription, // Dekódování popisu události
+                    summary: decodeHtmlEntities(kseftName),
+                    location: decodeHtmlEntities(kseftLocation),
+                    description: kseftDescription,
                     start: {},
                     end: {}
                 };
 
                 if (startTime && endTime) {
-                    // Pokud jsou vyplněny časy, nastavíme je
-                    eventDetails.start.dateTime = eventDate + 'T' + startTime + ':00';
-                    eventDetails.end.dateTime = eventDate + 'T' + endTime + ':00';
-                    eventDetails.start.timeZone = 'Europe/Prague';
-                    eventDetails.end.timeZone = 'Europe/Prague';
+                    var startLocal = new Date(eventDate + 'T' + startTime + ':00');
+                    var endLocal = new Date(eventDate + 'T' + endTime + ':00');
+                    // Použijeme funkci, která vrátí řetězec v ISO formátu s offsetem.
+                    eventDetails.start.dateTime = formatDateTimeWithOffset(startLocal, 'Europe/Prague');
+                    eventDetails.end.dateTime = formatDateTimeWithOffset(endLocal, 'Europe/Prague');
+                    // Vynecháváme explicitní nastavení timeZone
                 } else {
-                    // Pokud časy nejsou vyplněny, vytvoříme celodenní událost
                     eventDetails.start.date = eventDate;
                     eventDetails.end.date = eventDate;
                 }
 
-                console.log('JS Event details:', eventDetails); // Logování detailů události
-
-                var googleEventId = response.data.google_event_id || null; // ID události v Google Kalendáři
-                handleGoogleCalendarEvent(kseftId, eventDetails, googleEventId); // Volání funkce pro přidání nebo aktualizaci události
+                console.log('JS Event details:', eventDetails);
+                var googleEventId = response.data.google_event_id || null;
+                handleGoogleCalendarEvent(kseftId, eventDetails, googleEventId);
             } else {
-                console.error('Error fetching event details:', response.data); // Logování chyby získání detailů události
-                alert('Chyba při získávání detailů události.'); // Zobrazení chybové zprávy
+                console.error('Error fetching event details:', response.data);
+                alert('Chyba při získávání detailů události.');
             }
         }).fail(function(xhr, status, error) {
-            console.error('AJAX error:', status, error); // Logování chyby AJAX požadavku
-            console.error('Response:', xhr.responseText); // Logování odpovědi AJAX požadavku
-            alert('Chyba při komunikaci se serverem add - GC.JS.'); // Zobrazení chybové zprávy
+            console.error('AJAX error:', status, error);
+            console.error('Response:', xhr.responseText);
+            alert('Chyba při komunikaci se serverem add - GC.JS.');
         });
     }
 
     function manageKseftFormHandler(e) {
-        e.preventDefault(); // Zabránění výchozímu chování formuláře
-        console.log('Manage Kseft form submitted'); // Logování odeslání formuláře
+        e.preventDefault(); // Zabránění výchozímu odeslání formuláře
+        console.log('Manage Kseft form submitted');
+        var kseftId = $('input[name="kseft_id"]').val(); // ID kšeftu
+        var kseftName = $('input[name="kseft_name"]').val();
+        var kseftLocation = $('input[name="kseft_location"]').val();
+        var kseftMeetingTime = $('input[name="kseft_meeting_time"]').val();
+        var kseftEventDate = $('input[name="kseft_event_date"]').val(); // Datum akce
+        var kseftStartTime = $('input[name="kseft_performance_start"]').val(); // Začátek vystoupení
+        var kseftEndTime = $('input[name="kseft_performance_end"]').val(); // Konec vystoupení
+        var kseftStatus = $('select[name="kseft_status"]').val();
+        var kseftDescription = $('textarea[name="kseft_description"]').val();
 
-        var kseftId = $('input[name="kseft_id"]').val(); // Získání ID kšeftu
-        var kseftName = $('input[name="kseft_name"]').val(); // Získání názvu kšeftu
-        var kseftLocation = $('input[name="kseft_location"]').val(); // Získání lokace kšeftu
-        var kseftMeetingTime = $('input[name="kseft_meeting_time"]').val(); // Získání času srazu
-        var kseftEventDate = $('input[name="kseft_event_date"]').val(); // Získání data kšeftu
-        var kseftStartTime = $('input[name="kseft_performance_start"]').val(); // Získání začátku vystoupení
-        var kseftEndTime = $('input[name="kseft_performance_end"]').val(); // Získání konce vystoupení
-        var kseftStatus = $('select[name="kseft_status"]').val(); // Získání stavu kšeftu
-        var kseftDescription = $('textarea[name="kseft_description"]').val(); // Získání popisu kšeftu
-
-        if (!kseftId) { // Kontrola, zda je kseftId k dispozici
-            console.error('Missing kseft_id'); // Logování chyby
-            alert('Chyba: kseft_id není k dispozici.'); // Zobrazení chybové zprávy
-            return; // Ukončení funkce
+        if (!kseftId) {
+            console.error('Missing kseft_id');
+            alert('Chyba: kseft_id není k dispozici.');
+            return;
         }
 
         var eventDetails = {
-            summary: decodeHtmlEntities(kseftName), // Dekódování názvu události
-            location: decodeHtmlEntities(kseftLocation), // Dekódování lokace události
-            description: decodeHtmlEntities(kseftDescription), // Dekódování popisu události
+            summary: decodeHtmlEntities(kseftName),
+            location: decodeHtmlEntities(kseftLocation),
+            description: decodeHtmlEntities(kseftDescription),
             start: {},
             end: {}
         };
 
         if (kseftStartTime && kseftEndTime) {
-            // Pokud jsou vyplněny časy, nastavíme je
-            eventDetails.start.dateTime = kseftEventDate + 'T' + kseftStartTime + ':00';
-            eventDetails.end.dateTime = kseftEventDate + 'T' + kseftEndTime + ':00';
-            eventDetails.start.timeZone = 'Europe/Prague';
-            eventDetails.end.timeZone = 'Europe/Prague';
+            var startLocal = new Date(kseftEventDate + 'T' + kseftStartTime + ':00');
+            var endLocal = new Date(kseftEventDate + 'T' + kseftEndTime + ':00');
+            eventDetails.start.dateTime = formatDateTimeWithOffset(startLocal, 'Europe/Prague');
+            eventDetails.end.dateTime = formatDateTimeWithOffset(endLocal, 'Europe/Prague');
         } else {
-            // Pokud časy nejsou vyplněny, vytvoříme celodenní událost
             eventDetails.start.date = kseftEventDate;
             eventDetails.end.date = kseftEventDate;
         }
 
-        var googleEventId = $('input[name="google_calendar_event_id"]').val(); // Získání ID události v Google Kalendáři
+        var googleEventId = $('input[name="google_calendar_event_id"]').val(); // ID události v Google Kalendáři
         if (googleEventId) {
-            handleGoogleCalendarEvent(kseftId, eventDetails, googleEventId); // Volání funkce pro aktualizaci události
+            handleGoogleCalendarEvent(kseftId, eventDetails, googleEventId);
         }
 
         this.submit(); // Odeslání formuláře
