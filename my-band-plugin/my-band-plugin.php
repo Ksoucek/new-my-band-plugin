@@ -6,7 +6,6 @@ Version: 1.0
 Author: Vaše Jméno
 */
 
-error_log('Muzikantské kšefty plugin loaded'); // Logování načtení pluginu
 
 $autoload_path = plugin_dir_path(__FILE__) . 'vendor/autoload.php'; // Cesta k autoload souboru
 if (file_exists($autoload_path)) { // Kontrola, zda soubor existuje

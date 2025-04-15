@@ -243,6 +243,51 @@ get_header();
                 input.classList.remove('unsaved'); // Odebere červený rámeček po uložení
             });
         });
+
+        const icoInput = document.getElementById('invoice_customer_ico');
+        const nameInput = document.getElementById('invoice_customer_name');
+        const addressInput = document.getElementById('invoice_customer_address');
+
+        icoInput.addEventListener('blur', async function () {
+            const ico = icoInput.value.trim();
+            console.log('Hodnota IČO:', ico);
+
+            if (ico) {
+                // Přímé volání API ARES bez interního odkazu
+                const requestUrl = `https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`;
+                console.log('Odeslaný request:', requestUrl);
+                
+                try {
+                    const response = await fetch(requestUrl);
+                    console.log('Stav odpovědi:', response.status, response.statusText);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('Odpověď z ARES API:', data);
+
+                        if (data && data.obchodniJmeno) {
+                            nameInput.value = data.obchodniJmeno;
+                            
+                            // Použijeme textovaAdresa, která je nyní pod záložkou "sidlo"
+                            if (data.sidlo && data.sidlo.textovaAdresa) {
+                                addressInput.value = data.sidlo.textovaAdresa;
+                            } else {
+                                addressInput.value = '';
+                            }
+                            nameInput.classList.remove('unsaved');
+                            addressInput.classList.remove('unsaved');
+                        } else {
+                            console.error('Data z ARES API nejsou kompletní nebo neplatná.', data);
+                        }
+                    } else {
+                        const errorText = await response.text();
+                        console.error('Chyba při načítání údajů z ARES:', response.status, response.statusText, errorText);
+                    }
+                } catch (error) {
+                    console.error('Chyba při komunikaci s ARES API:', error);
+                }
+            }
+        });
     });
 </script>
 
@@ -321,20 +366,26 @@ get_header();
             <div style="flex: 1;">
                 <table class="form-table">
                     <tr>
+                        <th><label for="invoice_customer_ico">IČO zákazníka</label></th>
+                        <td>
+                            <input type="text" name="invoice_data[customer_ico]" id="invoice_customer_ico" value="<?php echo esc_attr($invoice_data['customer_ico']); ?>" />
+                        </td>
+                    </tr>
+                    <tr>
                         <th><label for="invoice_customer_name">Jméno zákazníka</label></th>
-                        <td><input type="text" name="invoice_data[customer_name]" id="invoice_customer_name" value="<?php echo esc_attr($invoice_data['customer_name']); ?>" /></td>
+                        <td>
+                            <input type="text" name="invoice_data[customer_name]" id="invoice_customer_name" value="<?php echo esc_attr($invoice_data['customer_name']); ?>" />
+                        </td>
                     </tr>
                     <tr>
                         <th><label for="invoice_customer_address">Adresa zákazníka</label></th>
-                        <td><input type="text" name="invoice_data[customer_address]" id="invoice_customer_address" value="<?php echo esc_attr($invoice_data['customer_address']); ?>" /></td>
+                        <td>
+                            <input type="text" name="invoice_data[customer_address]" id="invoice_customer_address" value="<?php echo esc_attr($invoice_data['customer_address']); ?>" />
+                        </td>
                     </tr>
                     <tr>
                         <th><label for="invoice_customer_phone">Telefon zákazníka</label></th>
                         <td><input type="text" name="invoice_data[customer_phone]" id="invoice_customer_phone" value="<?php echo esc_attr($invoice_data['customer_phone']); ?>" /></td>
-                    </tr>
-                    <tr>
-                        <th><label for="invoice_customer_ico">IČO zákazníka</label></th>
-                        <td><input type="text" name="invoice_data[customer_ico]" id="invoice_customer_ico" value="<?php echo esc_attr($invoice_data['customer_ico']); ?>" /></td>
                     </tr>
                 </table>
             </div>
