@@ -231,29 +231,50 @@ get_header();
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.querySelector('form');
         const inputs = form.querySelectorAll('input, textarea, select');
-
+        const messageField = document.getElementById('invoice_message');
+        const amountField = document.getElementById('invoice_amount');
+        const kseftTitle = "<?php echo esc_js($event_title); ?>";
+        const kseftDate = "<?php echo (get_post_meta($invoice_id, 'kseft_event_date', true)) ? date('d.m.Y', strtotime(get_post_meta($invoice_id, 'kseft_event_date', true))) : ''; ?>";
+        
+        // Před odesláním formuláře - pokud je pole zpráva prázdné a Částka vyplněná, zaplní se default text.
+        form.addEventListener('submit', function (e) {
+            if ( amountField.value.trim() !== '' && !messageField.value.trim() ) {
+                messageField.value = `Fakturujeme vám za hudební produkci na akci ${kseftTitle} dne ${kseftDate}. Cena produkce včetně dopravy ${amountField.value} kč`;
+            }
+        });
+        
+        // Pokud se změní Částka a ve zprávě již existuje text, aktualizujeme jen hodnotu částky v default textu.
+        amountField.addEventListener('input', function () {
+            if (messageField.value.trim() !== '') {
+                // Hledáme vzor: "Cena produkce včetně dopravy <nějaké číslo> kč"
+                const priceRegex = /(Cena produkce včetně dopravy\s+)([\d\.,]+)(\s?kč)/;
+                if (priceRegex.test(messageField.value)) {
+                    messageField.value = messageField.value.replace(priceRegex, `$1${amountField.value}$3`);
+                }
+            }
+        });
+        
         inputs.forEach(input => {
             input.addEventListener('input', () => {
-                input.classList.add('unsaved'); // Přidá červený rámeček při změně
+                input.classList.add('unsaved');
             });
         });
-
+        
         form.addEventListener('submit', () => {
             inputs.forEach(input => {
-                input.classList.remove('unsaved'); // Odebere červený rámeček po uložení
+                input.classList.remove('unsaved');
             });
         });
-
+        
         const icoInput = document.getElementById('invoice_customer_ico');
         const nameInput = document.getElementById('invoice_customer_name');
         const addressInput = document.getElementById('invoice_customer_address');
-
+        
         icoInput.addEventListener('blur', async function () {
             const ico = icoInput.value.trim();
             console.log('Hodnota IČO:', ico);
-
+        
             if (ico) {
-                // Přímé volání API ARES bez interního odkazu
                 const requestUrl = `https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`;
                 console.log('Odeslaný request:', requestUrl);
                 
@@ -264,11 +285,10 @@ get_header();
                     if (response.ok) {
                         const data = await response.json();
                         console.log('Odpověď z ARES API:', data);
-
+        
                         if (data && data.obchodniJmeno) {
                             nameInput.value = data.obchodniJmeno;
                             
-                            // Použijeme textovaAdresa, která je nyní pod záložkou "sidlo"
                             if (data.sidlo && data.sidlo.textovaAdresa) {
                                 addressInput.value = data.sidlo.textovaAdresa;
                             } else {
