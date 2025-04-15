@@ -61,19 +61,37 @@ get_header(); // Načtení hlavičky šablony
     }
 </style>
 <?php
+$today = current_time('Y-m-d');
 $args = array(
-    'post_type' => 'kseft',
-    'post_status' => 'publish',
+    'post_type'      => 'kseft',
+    'post_status'    => 'publish',
     'posts_per_page' => -1,
-    'meta_key' => 'kseft_event_date', // Klíč pro datum kšeftu
-    'orderby' => 'meta_value',
-    'order' => 'ASC' // Řazení od minulosti po budoucnost
+    'meta_key'       => 'kseft_event_date', // Klíč pro datum kšeftu
+    'orderby'        => 'meta_value',
+    'order'          => 'ASC' // Řazení od minulosti po budoucnost
 );
+if ( !isset($_GET['all']) ) {
+    $args['meta_query'] = array(
+        array(
+            'key'     => 'kseft_event_date',
+            'value'   => $today,
+            'compare' => '>=',
+            'type'    => 'DATE'
+        )
+    );
+}
 
 $ksefty = new WP_Query($args);
 ?>
 <div class="wrap">
     <h1>Přehled Faktur</h1>
+    <form method="get" style="text-align: center; margin-bottom: 20px;">
+        <label>
+            <input type="checkbox" name="all" value="1" <?php if(isset($_GET['all'])) echo 'checked="checked"'; ?>>
+            Zobrazit všechny faktury
+        </label>
+        <button type="submit" class="button">Použít</button>
+    </form>
     <table class="invoice-overview">
         <thead>
             <tr>

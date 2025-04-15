@@ -313,26 +313,25 @@ get_header();
 
 <div class="wrap">
     <h1>Detail Faktury <?php echo esc_html($invoice_id); ?><?php if (!empty($event_title)): ?> - <?php echo esc_html($event_title); ?><?php endif; ?></h1>
+    <?php 
+    // Získání všech kšeftů seřazených podle termínu akce
+    $args = array(
+        'post_type'      => 'kseft',
+        'posts_per_page' => -1,
+        'meta_key'       => 'kseft_event_date',
+        'orderby'        => 'meta_value',
+        'order'          => 'ASC',
+        'fields'         => 'ids'
+    );
+    $all_ksefts = get_posts($args);
+
+    // Najdeme aktuální pozici faktury v seznamu
+    $current_index = array_search($invoice_id, $all_ksefts);
+    // Získání ID předchozí a další faktury
+    $prev_invoice_id = $current_index > 0 ? $all_ksefts[$current_index - 1] : null;
+    $next_invoice_id = $current_index < count($all_ksefts) - 1 ? $all_ksefts[$current_index + 1] : null;
+    ?>
     <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 20px;">
-        <?php 
-        // Získání všech kšeftů seřazených podle termínu akce
-        $args = array(
-            'post_type' => 'kseft',
-            'posts_per_page' => -1,
-            'meta_key' => 'kseft_event_date',
-            'orderby' => 'meta_value',
-            'order' => 'ASC',
-            'fields' => 'ids'
-        );
-        $all_ksefts = get_posts($args);
-
-        // Najdeme aktuální pozici faktury v seznamu
-        $current_index = array_search($invoice_id, $all_ksefts);
-
-        // Získání ID předchozí a další faktury
-        $prev_invoice_id = $current_index > 0 ? $all_ksefts[$current_index - 1] : null;
-        $next_invoice_id = $current_index < count($all_ksefts) - 1 ? $all_ksefts[$current_index + 1] : null;
-        ?>
         <?php if ($prev_invoice_id): ?>
             <a href="<?php echo esc_url(add_query_arg('invoice_id', $prev_invoice_id, site_url('/invoice-details'))); ?>" class="button">Předchozí faktura</a>
         <?php endif; ?>
