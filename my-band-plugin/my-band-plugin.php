@@ -19,10 +19,10 @@ function my_team_plugin_enqueue_scripts() {
     wp_enqueue_script('jquery'); // Načtení jQuery
     wp_enqueue_script('my-team-plugin-script', plugins_url('/js/my-team-plugin.js', __FILE__), array('jquery'), '1.0', true); // Načtení hlavního JS souboru
     wp_localize_script('my-team-plugin-script', 'myTeamPlugin', array(
-        'ajax_url' => admin_url('admin-ajax.php'), // URL pro AJAX požadavky
-        'nonce' => wp_create_nonce('wp_rest'), // Nonce pro zabezpečení
-        'site_url' => site_url(), // URL webu
-        'post_id' => get_the_ID(), // ID aktuálního příspěvku
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('my_band_plugin_ajax_nonce'), // More specific nonce
+        'site_url' => site_url(),
+        'post_id' => get_the_ID(),
         'api_key' => get_option('my_team_plugin_openrouteservice_api_key'), // API klíč pro OpenRouteService
         'rest_url' => rest_url('google-calendar/v1/add-to-calendar'), // REST URL pro přidání do kalendáře
         'kseft_id' => isset($_GET['kseft_id']) ? intval($_GET['kseft_id']) : 0 // Přidání kseft_id
@@ -33,70 +33,86 @@ function my_team_plugin_enqueue_scripts() {
     wp_enqueue_style('my-team-plugin-style', plugins_url('/css/my-team-plugin.css', __FILE__)); // Načtení hlavního CSS souboru
     wp_enqueue_style('my-team-plugin-responsive-style', plugins_url('/css/my-team-plugin-responsive.css', __FILE__)); // Načtení CSS souboru pro responzivní design
 }
-add_action('wp_enqueue_scripts', 'my_team_plugin_enqueue_scripts'); // Přidání akce pro načtení skriptů a stylů
+add_action('wp_enqueue_scripts', 'my_team_plugin_enqueue_scripts');
 
 function my_team_plugin_create_kseft() {
-    check_ajax_referer('wp_rest', 'nonce');
-    $kseft_name = sanitize_text_field($_POST['kseft_name']); // Sanitizace názvu kšeftu
+    check_ajax_referer('my_band_plugin_ajax_nonce', 'nonce');
+    $kseft_name = isset($_POST['kseft_name']) ? sanitize_text_field(wp_unslash($_POST['kseft_name'])) : '';
+
+    if (empty($kseft_name)) {
+        wp_send_json_error(array('message' => __('Název akce nemůže být prázdný.', 'my-band-plugin')));
+        // No wp_die() needed after wp_send_json_error() as it includes it.
+    }
+
     $kseft_id = wp_insert_post(array(
-        'post_title' => $kseft_name, // Název příspěvku
-        'post_type' => 'kseft', // Typ příspěvku
-        'post_status' => 'publish' // Stav příspěvku
+        'post_title' => $kseft_name,
+        'post_type' => 'kseft',
+        'post_status' => 'publish'
     ));
 
-    if (is_wp_error($kseft_id)) { // Kontrola, zda došlo k chybě
-        wp_send_json_error(array('message' => 'Chyba při vytváření Akce.')); // Odeslání chybové zprávy
+    if (is_wp_error($kseft_id)) {
+        wp_send_json_error(array('message' => $kseft_id->get_error_message()));
     } else {
-        wp_send_json_success(array('kseft_id' => $kseft_id, 'redirect_url' => get_permalink($kseft_id))); // Odeslání úspěšné zprávy s ID kšeftu a URL pro přesměrování
+        wp_send_json_success(array('kseft_id' => $kseft_id, 'redirect_url' => get_permalink($kseft_id)));
     }
-    wp_die();
+    // No wp_die() needed after wp_send_json_success() as it includes it.
 }
-add_action('wp_ajax_my_team_plugin_create_kseft', 'my_team_plugin_create_kseft'); // Přidání AJAX akce pro přihlášené uživatele
-add_action('wp_ajax_nopriv_my_team_plugin_create_kseft', 'my_team_plugin_create_kseft'); // Přidání AJAX akce pro nepřihlášené uživatele
+add_action('wp_ajax_my_team_plugin_create_kseft', 'my_team_plugin_create_kseft');
+add_action('wp_ajax_nopriv_my_team_plugin_create_kseft', 'my_team_plugin_create_kseft'); // Consider if nopriv is appropriate for creating posts
 
 function my_team_plugin_add_member() {
-    check_ajax_referer('wp_rest', 'nonce');
-    $kseft_id = intval($_POST['kseft_id']); // Získání ID kšeftu
-    $member_name = sanitize_text_field($_POST['member_name']); // Sanitizace jména člena
-    add_post_meta($kseft_id, 'kseft_member', $member_name); // Přidání člena jako meta data
-    echo 'Member added'; // Zobrazení zprávy
-    wp_die(); // Ukončení skriptu
+    check_ajax_referer('my_band_plugin_ajax_nonce', 'nonce');
+    $kseft_id = isset($_POST['kseft_id']) ? intval($_POST['kseft_id']) : 0;
+    $member_name = isset($_POST['member_name']) ? sanitize_text_field(wp_unslash($_POST['member_name'])) : '';
+
+    if (empty($kseft_id) || empty($member_name)) {
+        wp_send_json_error(array('message' => __('Chybí ID akce nebo jméno člena.', 'my-band-plugin')));
+    }
+    // Consider capability check if needed for 'nopriv' action
+    // Example: if (!current_user_can('edit_post', $kseft_id) && get_post_type($kseft_id) == 'kseft' ) { wp_send_json_error(...); }
+    add_post_meta($kseft_id, 'kseft_member', $member_name);
+    wp_send_json_success(array('message' => __('Člen přidán.', 'my-band-plugin')));
 }
-add_action('wp_ajax_my_team_plugin_add_member', 'my_team_plugin_add_member'); // Přidání AJAX akce pro přihlášené uživatele
-add_action('wp_ajax_nopriv_my_team_plugin_add_member', 'my_team_plugin_add_member'); // Přidání AJAX akce pro nepřihlášené uživatele
+add_action('wp_ajax_my_team_plugin_add_member', 'my_team_plugin_add_member');
+add_action('wp_ajax_nopriv_my_team_plugin_add_member', 'my_team_plugin_add_member'); // Consider if nopriv is appropriate
 
 function my_team_plugin_schedule_event() {
-    check_ajax_referer('wp_rest', 'nonce');
-    $kseft_id = intval($_POST['kseft_id']); // Získání ID kšeftu
-    $event_name = sanitize_text_field($_POST['event_name']); // Sanitizace názvu události
-    $event_date = sanitize_text_field($_POST['event_date']); // Sanitizace data události
-    add_post_meta($kseft_id, 'kseft_event', array('name' => $event_name, 'date' => $event_date)); // Přidání události jako meta data
-    echo 'Event scheduled'; // Zobrazení zprávy
-    wp_die(); // Ukončení skriptu
+    check_ajax_referer('my_band_plugin_ajax_nonce', 'nonce');
+    $kseft_id = isset($_POST['kseft_id']) ? intval($_POST['kseft_id']) : 0;
+    $event_name = isset($_POST['event_name']) ? sanitize_text_field(wp_unslash($_POST['event_name'])) : '';
+    $event_date = isset($_POST['event_date']) ? sanitize_text_field(wp_unslash($_POST['event_date'])) : ''; // Basic sanitization
+
+    if (empty($kseft_id) || empty($event_name) || empty($event_date)) {
+        wp_send_json_error(array('message' => __('Chybí ID akce, název nebo datum události.', 'my-band-plugin')));
+    }
+    // Consider date validation for $event_date (e.g., using a regex or DateTime::createFromFormat)
+    // Consider capability check if needed
+    add_post_meta($kseft_id, 'kseft_event', array('name' => $event_name, 'date' => $event_date));
+    wp_send_json_success(array('message' => __('Událost naplánována.', 'my-band-plugin')));
 }
-add_action('wp_ajax_my_team_plugin_schedule_event', 'my_team_plugin_schedule_event'); // Přidání AJAX akce pro přihlášené uživatele
-add_action('wp_ajax_nopriv_my_team_plugin_schedule_event', 'my_team_plugin_schedule_event'); // Přidání AJAX akce pro nepřihlášené uživatele
+add_action('wp_ajax_my_team_plugin_schedule_event', 'my_team_plugin_schedule_event');
+add_action('wp_ajax_nopriv_my_team_plugin_schedule_event', 'my_team_plugin_schedule_event');
 
 function my_team_plugin_register_post_types() {
     // Registrace post typu 'kseft'
     register_post_type('kseft', array(
         'labels' => array(
-            'name' => __('Kšefty', 'textdomain'), // Název typu příspěvku
-            'singular_name' => __('Kšeft', 'textdomain'), // Jednotné číslo typu příspěvku
-            'menu_name' => __('Kšefty', 'textdomain'), // Název v menu
-            'name_admin_bar' => __('Kšeft', 'textdomain'), // Název v admin baru
-            'add_new' => __('Přidat nový', 'textdomain'), // Text pro přidání nového příspěvku
-            'add_new_item' => __('Přidat nový kšeft', 'textdomain'), // Text pro přidání nového příspěvku
-            'new_item' => __('Nový kšeft', 'textdomain'), // Text pro nový příspěvek
-            'edit_item' => __('Upravit kšeft', 'textdomain'), // Text pro úpravu příspěvku
-            'view_item' => __('Zobrazit kšeft', 'textdomain'), // Text pro zobrazení příspěvku
-            'all_items' => __('Všechny kšefty', 'textdomain'), // Text pro všechny příspěvky
-            'search_items' => __('Hledat kšefty', 'textdomain'), // Text pro hledání příspěvků
-            'parent_item_colon' => __('Nadřazený kšeft:', 'textdomain'), // Text pro nadřazený příspěvek
-            'not_found' => __('Žádné kšefty nenalezeny.', 'textdomain'), // Text pro nenalezené příspěvky
-            'not_found_in_trash' => __('Žádné kšefty v koši.', 'textdomain') // Text pro nenalezené příspěvky v koši
+            'name' => __('Kšefty', 'my-band-plugin'),
+            'singular_name' => __('Kšeft', 'my-band-plugin'),
+            'menu_name' => __('Kšefty', 'my-band-plugin'),
+            'name_admin_bar' => __('Kšeft', 'my-band-plugin'),
+            'add_new' => __('Přidat nový', 'my-band-plugin'),
+            'add_new_item' => __('Přidat nový kšeft', 'my-band-plugin'),
+            'new_item' => __('Nový kšeft', 'my-band-plugin'),
+            'edit_item' => __('Upravit kšeft', 'my-band-plugin'),
+            'view_item' => __('Zobrazit kšeft', 'my-band-plugin'),
+            'all_items' => __('Všechny kšefty', 'my-band-plugin'),
+            'search_items' => __('Hledat kšefty', 'my-band-plugin'),
+            'parent_item_colon' => __('Nadřazený kšeft:', 'my-band-plugin'),
+            'not_found' => __('Žádné kšefty nenalezeny.', 'my-band-plugin'),
+            'not_found_in_trash' => __('Žádné kšefty v koši.', 'my-band-plugin')
         ),
-        'public' => true, // Veřejný typ příspěvku
+        'public' => true,
         'has_archive' => true, // Archivace příspěvků
         'show_in_menu' => true, // Zobrazení v menu
         'show_ui' => true, // Zobrazení v uživatelském rozhraní
@@ -108,22 +124,22 @@ function my_team_plugin_register_post_types() {
     // Registrace post typu 'obsazeni_template'
     register_post_type('obsazeni_template', array(
         'labels' => array(
-            'name' => __('Šablony obsazení', 'textdomain'), // Název typu příspěvku
-            'singular_name' => __('Šablona obsazení', 'textdomain'), // Jednotné číslo typu příspěvku
-            'menu_name' => __('Šablony obsazení', 'textdomain'), // Název v menu
-            'name_admin_bar' => __('Šablona obsazení', 'textdomain'), // Název v admin baru
-            'add_new' => __('Přidat novou', 'textdomain'), // Text pro přidání nového příspěvku
-            'add_new_item' => __('Přidat novou šablonu obsazení', 'textdomain'), // Text pro přidání nového příspěvku
-            'new_item' => __('Nová šablona obsazení', 'textdomain'), // Text pro nový příspěvek
-            'edit_item' => __('Upravit šablonu obsazení', 'textdomain'), // Text pro úpravu příspěvku
-            'view_item' => __('Zobrazit šablonu obsazení', 'textdomain'), // Text pro zobrazení příspěvku
-            'all_items' => __('Všechny šablony obsazení', 'textdomain'), // Text pro všechny příspěvky
-            'search_items' => __('Hledat šablony obsazení', 'textdomain'), // Text pro hledání příspěvků
-            'parent_item_colon' => __('Nadřazená šablona obsazení:', 'textdomain'), // Text pro nadřazený příspěvek
-            'not_found' => __('Žádné šablony obsazení nenalezeny.', 'textdomain'), // Text pro nenalezené příspěvky
-            'not_found_in_trash' => __('Žádné šablony obsazení v koši.', 'textdomain') // Text pro nenalezené příspěvky v koši
+            'name' => __('Šablony obsazení', 'my-band-plugin'),
+            'singular_name' => __('Šablona obsazení', 'my-band-plugin'),
+            'menu_name' => __('Šablony obsazení', 'my-band-plugin'),
+            'name_admin_bar' => __('Šablona obsazení', 'my-band-plugin'),
+            'add_new' => __('Přidat novou', 'my-band-plugin'),
+            'add_new_item' => __('Přidat novou šablonu obsazení', 'my-band-plugin'),
+            'new_item' => __('Nová šablona obsazení', 'my-band-plugin'),
+            'edit_item' => __('Upravit šablonu obsazení', 'my-band-plugin'),
+            'view_item' => __('Zobrazit šablonu obsazení', 'my-band-plugin'),
+            'all_items' => __('Všechny šablony obsazení', 'my-band-plugin'),
+            'search_items' => __('Hledat šablony obsazení', 'my-band-plugin'),
+            'parent_item_colon' => __('Nadřazená šablona obsazení:', 'my-band-plugin'),
+            'not_found' => __('Žádné šablony obsazení nenalezeny.', 'my-band-plugin'),
+            'not_found_in_trash' => __('Žádné šablony obsazení v koši.', 'my-band-plugin')
         ),
-        'public' => true, // Veřejný typ příspěvku
+        'public' => true,
         'has_archive' => true, // Archivace příspěvků
         'show_in_menu' => true, // Zobrazení v menu
         'show_ui' => true, // Zobrazení v uživatelském rozhraní
@@ -135,22 +151,22 @@ function my_team_plugin_register_post_types() {
     // Registrace post typu 'role'
     register_post_type('role', array(
         'labels' => array(
-            'name' => __('Role', 'textdomain'), // Název typu příspěvku
-            'singular_name' => __('Role', 'textdomain'), // Jednotné číslo typu příspěvku
-            'menu_name' => __('Role', 'textdomain'), // Název v menu
-            'name_admin_bar' => __('Role', 'textdomain'), // Název v admin baru
-            'add_new' => __('Přidat novou', 'textdomain'), // Text pro přidání nového příspěvku
-            'add_new_item' => __('Přidat novou roli', 'textdomain'), // Text pro přidání nového příspěvku
-            'new_item' => __('Nová role', 'textdomain'), // Text pro nový příspěvek
-            'edit_item' => __('Upravit roli', 'textdomain'), // Text pro úpravu příspěvku
-            'view_item' => __('Zobrazit roli', 'textdomain'), // Text pro zobrazení příspěvku
-            'all_items' => __('Všechny role', 'textdomain'), // Text pro všechny příspěvky
-            'search_items' => __('Hledat role', 'textdomain'), // Text pro hledání příspěvků
-            'parent_item_colon' => __('Nadřazená role:', 'textdomain'), // Text pro nadřazený příspěvek
-            'not_found' => __('Žádné role nenalezeny.', 'textdomain'), // Text pro nenalezené příspěvky
-            'not_found_in_trash' => __('Žádné role v koši.', 'textdomain') // Text pro nenalezené příspěvky v koši
+            'name' => __('Role', 'my-band-plugin'),
+            'singular_name' => __('Role', 'my-band-plugin'),
+            'menu_name' => __('Role', 'my-band-plugin'),
+            'name_admin_bar' => __('Role', 'my-band-plugin'),
+            'add_new' => __('Přidat novou', 'my-band-plugin'),
+            'add_new_item' => __('Přidat novou roli', 'my-band-plugin'),
+            'new_item' => __('Nová role', 'my-band-plugin'),
+            'edit_item' => __('Upravit roli', 'my-band-plugin'),
+            'view_item' => __('Zobrazit roli', 'my-band-plugin'),
+            'all_items' => __('Všechny role', 'my-band-plugin'),
+            'search_items' => __('Hledat role', 'my-band-plugin'),
+            'parent_item_colon' => __('Nadřazená role:', 'my-band-plugin'),
+            'not_found' => __('Žádné role nenalezeny.', 'my-band-plugin'),
+            'not_found_in_trash' => __('Žádné role v koši.', 'my-band-plugin')
         ),
-        'public' => true, // Veřejný typ příspěvku
+        'public' => true,
         'has_archive' => true, // Archivace příspěvků
         'show_in_menu' => true, // Zobrazení v menu
         'show_ui' => true, // Zobrazení v uživatelském rozhraní
@@ -162,22 +178,22 @@ function my_team_plugin_register_post_types() {
     // Registrace post typu 'auta'
     register_post_type('auta', array(
         'labels' => array(
-            'name' => __('Auta', 'textdomain'), // Název typu příspěvku
-            'singular_name' => __('Auto', 'textdomain'), // Jednotné číslo typu příspěvku
-            'menu_name' => __('Auta', 'textdomain'), // Název v menu
-            'name_admin_bar' => __('Auto', 'textdomain'), // Název v admin baru
-            'add_new' => __('Přidat nové', 'textdomain'), // Text pro přidání nového příspěvku
-            'add_new_item' => __('Přidat nové auto', 'textdomain'), // Text pro přidání nového příspěvku
-            'new_item' => __('Nové auto', 'textdomain'), // Text pro nový příspěvek
-            'edit_item' => __('Upravit auto', 'textdomain'), // Text pro úpravu příspěvku
-            'view_item' => __('Zobrazit auto', 'textdomain'), // Text pro zobrazení příspěvku
-            'all_items' => __('Všechna auta', 'textdomain'), // Text pro všechny příspěvky
-            'search_items' => __('Hledat auta', 'textdomain'), // Text pro hledání příspěvků
-            'parent_item_colon' => __('Nadřazené auto:', 'textdomain'), // Text pro nadřazený příspěvek
-            'not_found' => __('Žádná auta nenalezena.', 'textdomain'), // Text pro nenalezené příspěvky
-            'not_found_in_trash' => __('Žádná auta v koši.', 'textdomain') // Text pro nenalezené příspěvky v koši
+            'name' => __('Auta', 'my-band-plugin'),
+            'singular_name' => __('Auto', 'my-band-plugin'),
+            'menu_name' => __('Auta', 'my-band-plugin'),
+            'name_admin_bar' => __('Auto', 'my-band-plugin'),
+            'add_new' => __('Přidat nové', 'my-band-plugin'),
+            'add_new_item' => __('Přidat nové auto', 'my-band-plugin'),
+            'new_item' => __('Nové auto', 'my-band-plugin'),
+            'edit_item' => __('Upravit auto', 'my-band-plugin'),
+            'view_item' => __('Zobrazit auto', 'my-band-plugin'),
+            'all_items' => __('Všechna auta', 'my-band-plugin'),
+            'search_items' => __('Hledat auta', 'my-band-plugin'),
+            'parent_item_colon' => __('Nadřazené auto:', 'my-band-plugin'),
+            'not_found' => __('Žádná auta nenalezena.', 'my-band-plugin'),
+            'not_found_in_trash' => __('Žádná auta v koši.', 'my-band-plugin')
         ),
-        'public' => true, // Veřejný typ příspěvku
+        'public' => true,
         'has_archive' => true, // Archivace příspěvků
         'show_in_menu' => true, // Zobrazení v menu
         'show_ui' => true, // Zobrazení v uživatelském rozhraní
@@ -198,61 +214,91 @@ function my_team_plugin_add_role_meta_boxes() {
 add_action('add_meta_boxes', 'my_team_plugin_add_role_meta_boxes'); // Přidání akce pro přidání metaboxů
 
 function my_team_plugin_render_role_default_player_meta_box($post) {
-    $default_player = get_post_meta($post->ID, 'role_default_player', true); // Získání výchozího hráče
+    // Add nonce field to the first meta box in the 'role' CPT edit screen
+    wp_nonce_field('my_team_plugin_role_meta_nonce', 'role_meta_nonce_field');
+    $default_player = get_post_meta($post->ID, 'role_default_player', true);
     ?>
-    <label for="role_default_player">Výchozí hráč:</label>
-    <input type="text" name="role_default_player" id="role_default_player" value="<?php echo esc_attr($default_player); ?>" size="25" /> <!-- Pole pro výchozího hráče -->
+    <p>
+    <label for="role_default_player"><?php esc_html_e('Výchozí hráč:', 'my-band-plugin'); ?></label>
+    <input type="text" name="role_default_player" id="role_default_player" value="<?php echo esc_attr($default_player); ?>" class="widefat" />
+    </p>
     <?php
 }
 
 function my_team_plugin_render_role_default_pickup_location_meta_box($post) {
-    $default_pickup_location = get_post_meta($post->ID, 'role_default_pickup_location', true); // Získání výchozího místa vyzvednutí
+    $default_pickup_location = get_post_meta($post->ID, 'role_default_pickup_location', true);
     ?>
-    <label for="role_default_pickup_location">Výchozí místo vyzvednutí:</label>
-    <input type="text" name="role_default_pickup_location" id="role_default_pickup_location" value="<?php echo esc_attr($default_pickup_location); ?>" size="25" /> <!-- Pole pro výchozí místo vyzvednutí -->
+    <p>
+    <label for="role_default_pickup_location"><?php esc_html_e('Výchozí místo vyzvednutí:', 'my-band-plugin'); ?></label>
+    <input type="text" name="role_default_pickup_location" id="role_default_pickup_location" value="<?php echo esc_attr($default_pickup_location); ?>" class="widefat" />
+    </p>
     <?php
 }
 
 function my_team_plugin_render_role_password_meta_box($post) {
-    $role_password = get_post_meta($post->ID, 'role_password', true); // Získání hesla role
+    $role_password = get_post_meta($post->ID, 'role_password', true);
     ?>
-    <label for="role_password">Heslo role:</label>
-    <input type="password" name="role_password" id="role_password" value="<?php echo esc_attr($role_password); ?>" size="25" /> <!-- Pole pro heslo role -->
+    <p>
+    <label for="role_password"><?php esc_html_e('Heslo role:', 'my-band-plugin'); ?></label>
+    <input type="password" name="role_password" id="role_password" value="<?php echo esc_attr($role_password); ?>" class="widefat" />
+    <span class="description"><?php esc_html_e('Toto heslo se používá pro přístup na stránku "Moje Kšefty" pro tuto roli, pokud uživatel není přihlášen.', 'my-band-plugin'); ?></span>
+    </p>
     <?php
 }
 
 function my_team_plugin_render_role_alternative_meta_box($post) {
-    $alternative_role = get_post_meta($post->ID, 'role_alternative', true); // Získání alternativní role
-    $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1)); // Získání všech rolí
+    $alternative_role = get_post_meta($post->ID, 'role_alternative', true);
+    $roles_args = array('post_type' => 'role', 'numberposts' => -1, 'orderby' => 'title', 'order' => 'ASC', 'exclude' => $post->ID); // Exclude current post
+    $all_roles = get_posts($roles_args);
     ?>
-    <label for="role_alternative">Alternativní role:</label>
-    <select name="role_alternative" id="role_alternative">
-        <option value="">-- Vyberte alternativní roli --</option>
-        <?php foreach ($roles as $role) : ?>
+    <p>
+    <label for="role_alternative"><?php esc_html_e('Alternativní role:', 'my-band-plugin'); ?></label>
+    <select name="role_alternative" id="role_alternative" class="widefat">
+        <option value=""><?php esc_html_e('-- Vyberte alternativní roli --', 'my-band-plugin'); ?></option>
+        <?php foreach ($all_roles as $role) : ?>
             <option value="<?php echo esc_attr($role->ID); ?>" <?php selected($alternative_role, $role->ID); ?>><?php echo esc_html($role->post_title); ?></option>
         <?php endforeach; ?>
-    </select> <!-- Výběr pro alternativní roli -->
+    </select>
+    </p>
     <?php
 }
 
 function my_team_plugin_save_role_meta_box_data($post_id) {
-    if (array_key_exists('role_default_player', $_POST)) {
-        update_post_meta($post_id, 'role_default_player', sanitize_text_field($_POST['role_default_player'])); // Uložení výchozího hráče
+    // Add nonce check
+    if (!isset($_POST['role_meta_nonce_field']) || !wp_verify_nonce(sanitize_key($_POST['role_meta_nonce_field']), 'my_team_plugin_role_meta_nonce')) {
+        return;
     }
-    if (array_key_exists('role_default_pickup_location', $_POST)) {
-        update_post_meta($post_id, 'role_default_pickup_location', sanitize_text_field($_POST['role_default_pickup_location'])); // Uložení výchozího místa vyzvednutí
+    // If this is an autosave, our form has not been submitted, so we don't want to do anything.
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
     }
-    if (array_key_exists('role_password', $_POST)) {
-        update_post_meta($post_id, 'role_password', sanitize_text_field($_POST['role_password'])); // Uložení hesla role
+    // Check the user's permissions.
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
     }
-    if (array_key_exists('role_alternative', $_POST)) {
-        update_post_meta($post_id, 'role_alternative', sanitize_text_field($_POST['role_alternative'])); // Uložení alternativní role
+
+    $fields_to_save = array(
+        'role_default_player',
+        'role_default_pickup_location',
+        'role_password', // Consider hashing this if security needs to be tighter
+        'role_alternative'
+    );
+    foreach ($fields_to_save as $field) {
+        if (array_key_exists($field, $_POST)) {
+            update_post_meta($post_id, $field, sanitize_text_field(wp_unslash($_POST[$field])));
+        }
+    }
+    // Handle checkbox separately if it's part of this meta box section
+    if (isset($_POST['role_confirm_anyone'])) { // This checkbox is rendered by my_team_plugin_render_role_confirm_anyone_meta_box
+        update_post_meta($post_id, 'role_confirm_anyone', '1');
+    } else {
+        delete_post_meta($post_id, 'role_confirm_anyone');
     }
 }
-add_action('save_post', 'my_team_plugin_save_role_meta_box_data'); // Přidání akce pro uložení metaboxů
+add_action('save_post_role', 'my_team_plugin_save_role_meta_box_data'); 
 
 function my_team_plugin_display_ksefty() {
-    error_log('my_team_plugin_display_ksefty function called'); // Logování volání funkce
+    // error_log('my_team_plugin_display_ksefty function called'); // Can be verbose
     $show_all = isset($_GET['show_all']) && $_GET['show_all'] === '1'; // Kontrola, zda je zaškrtnuto zobrazení všech kšeftů
     $args = array(
         'post_type' => 'kseft', // Typ příspěvku
@@ -275,13 +321,16 @@ function my_team_plugin_display_ksefty() {
     }
 
     $ksefty = new WP_Query($args); // Dotaz na příspěvky
-    error_log('Query executed: ' . print_r($args, true)); // Logování dotazu
-    $output = '<div class="business-overview" style="text-align: center;">'; // Přidání stylu pro vycentrování
-    $output .= '<a href="' . site_url('/moje-ksefty') . '" class="button">Moje Akce</a>'; // Přidání tlačítka pro přechod na "moje kšefty"
-    $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit novou Akci</a>'; // Přesunutí tlačítka nahoru
-    $output .= '<form method="GET" action=""><label><input type="checkbox" name="show_all" value="1" ' . ($show_all ? 'checked' : '') . '> Zobrazit všechny akce</label><button type="submit" class="button">Filtrovat</button></form>'; // Přidání zaškrtávacího políčka pro zobrazení všech kšeftů
+    // error_log('Query executed: ' . print_r($args, true)); // Can be verbose
+    $plugin_text_domain = 'my-band-plugin';
+    $output = '<div class="business-overview my-band-plugin-centered-content">'; // Use class for styling
+    $output .= '<a href="' . esc_url(site_url('/moje-ksefty')) . '" class="button">' . esc_html__('Moje Akce', $plugin_text_domain) . '</a> ';
+    $output .= '<a href="' . esc_url(site_url('/manage-kseft')) . '" class="button">' . esc_html__('Vytvořit novou Akci', $plugin_text_domain) . '</a>';
+    $current_page_url = get_permalink();
+    if (!$current_page_url) $current_page_url = ''; // Fallback if not on a page
+    $output .= '<form method="GET" action="' . esc_url($current_page_url) . '" class="my-band-plugin-filter-form"><label><input type="checkbox" name="show_all" value="1" ' . checked($show_all, true, false) . '> ' . esc_html__('Zobrazit všechny akce', $plugin_text_domain) . '</label><button type="submit" class="button">' . esc_html__('Filtrovat', $plugin_text_domain) . '</button></form>';
     if ($ksefty->have_posts()) {
-        $output .= '<table>';
+        $output .= '<table class="wp-list-table widefat fixed striped my-band-plugin-table">'; // Added WP classes
         $output .= '<thead><tr><th>Termín</th><th>Název</th><th>Umístění</th><th>Stav obsazení</th><th>Stav</th></thead>';
         $output .= '<tbody>';
         while ($ksefty->have_posts()) {
@@ -323,27 +372,27 @@ function my_team_plugin_display_ksefty() {
             }
             $formatted_date = date_i18n('D d.m.Y', strtotime($event_date)); // Formátování data
             $output .= '<tr>';
-            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($formatted_date) . '</a></td>'; // Přidání odkazu na termín
-            $output .= '<td><a href="' . get_permalink() . '">' . get_the_title() . '</a></td>'; // Přidání odkazu na název
-            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($location) . '</a></td>'; // Přidání odkazu na lokaci
-            $output .= '<td><a href="' . get_permalink() . '" class="button kseft-status-button ' . esc_attr($obsazeni_class) . '">' . esc_html($obsazeni_text) . '</a></td>'; // Přidání odkazu na stav obsazení
-            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($status) . '</a></td>'; // Přidání odkazu na stav
+            $output .= '<td><a href="' . esc_url(get_permalink()) . '">' . esc_html($formatted_date) . '</a></td>';
+            $output .= '<td><a href="' . esc_url(get_permalink()) . '">' . esc_html(get_the_title()) . '</a></td>';
+            $output .= '<td><a href="' . esc_url(get_permalink()) . '">' . esc_html($location) . '</a></td>';
+            $output .= '<td><a href="' . esc_url(get_permalink()) . '" class="button kseft-status-button ' . esc_attr($obsazeni_class) . '">' . esc_html($obsazeni_text) . '</a></td>';
+            $output .= '<td><a href="' . esc_url(get_permalink()) . '">' . esc_html($status) . '</a></td>';
             $output .= '</tr>';
         }
         $output .= '</tbody>';
         $output .= '</table>';
-        wp_reset_postdata(); // Resetování dotazu
+        wp_reset_postdata();
     } else {
-        $output .= '<p>Žádné akce nejsou k dispozici.</p>'; // Zobrazení zprávy, pokud nejsou žádné kšefty
+        $output .= '<p>' . esc_html__('Žádné akce nejsou k dispozici.', $plugin_text_domain) . '</p>';
     }
     $output .= '</div>';
-    error_log('Output: ' . $output); // Logování výstupu
+    // error_log('Output: ' . $output); // Can be verbose
     return $output;
 }
-add_shortcode('display_ksefty', 'my_team_plugin_display_ksefty'); // Přidání shortcode pro zobrazení kšeftů
+add_shortcode('display_ksefty', 'my_team_plugin_display_ksefty');
 
 function my_team_plugin_display_moje_ksefty() {
-    error_log('my_team_plugin_display_moje_ksefty function called'); // Logování volání funkce
+    // error_log('my_team_plugin_display_moje_ksefty function called'); // Can be verbose
     $show_all = isset($_GET['show_all']) && $_GET['show_all'] === '1'; // Kontrola, zda je zaškrtnuto zobrazení všech kšeftů
     $args = array(
         'post_type' => 'kseft', // Typ příspěvku
@@ -366,13 +415,16 @@ function my_team_plugin_display_moje_ksefty() {
     }
 
     $ksefty = new WP_Query($args); // Dotaz na příspěvky
-    error_log('Query executed: ' . print_r($args, true)); // Logování dotazu
-    $output = '<div class="business-overview" style="text-align: center;">'; // Přidání stylu pro vycentrování
-    $output .= '<a href="' . site_url('/moje-ksefty') . '" class="button">Moje akce</a>'; // Přidání tlačítka pro přechod na "moje kšefty"
-    $output .= '<a href="' . site_url('/manage-kseft') . '" class="button">Vytvořit novou akci</a>'; // Přesunutí tlačítka nahoru
-    $output .= '<form method="GET" action=""><label><input type="checkbox" name="show_all" value="1" ' . ($show_all ? 'checked' : '') . '> Zobrazit všechny Akce</label><button type="submit" class="button">Filtrovat</button></form>'; // Přidání zaškrtávacího políčka pro zobrazení všech kšeftů
+    // error_log('Query executed: ' . print_r($args, true)); // Can be verbose
+    $plugin_text_domain = 'my-band-plugin';
+    $output = '<div class="business-overview my-band-plugin-centered-content">';
+    $output .= '<a href="' . esc_url(site_url('/moje-ksefty')) . '" class="button">' . esc_html__('Moje akce', $plugin_text_domain) . '</a> ';
+    $output .= '<a href="' . esc_url(site_url('/manage-kseft')) . '" class="button">' . esc_html__('Vytvořit novou akci', $plugin_text_domain) . '</a>';
+    $current_page_url = get_permalink();
+    if (!$current_page_url) $current_page_url = '';
+    $output .= '<form method="GET" action="' . esc_url($current_page_url) . '" class="my-band-plugin-filter-form"><label><input type="checkbox" name="show_all" value="1" ' . checked($show_all, true, false) . '> ' . esc_html__('Zobrazit všechny Akce', $plugin_text_domain) . '</label><button type="submit" class="button">' . esc_html__('Filtrovat', $plugin_text_domain) . '</button></form>';
     if ($ksefty->have_posts()) {
-        $output .= '<table>';
+        $output .= '<table class="wp-list-table widefat fixed striped my-band-plugin-table">';
         $output .= '<thead><tr><th>Termín</th><th>Umístění</th><th>Název</th><th>Stav obsazení</th><th>Stav</th></thead>';
         $output .= '<tbody>';
         while ($ksefty->have_posts()) {
@@ -382,7 +434,7 @@ function my_team_plugin_display_moje_ksefty() {
             $status = get_post_meta(get_the_ID(), 'kseft_status', true); // Získání stavu
             $obsazeni_template_id = get_post_meta(get_the_ID(), 'kseft_obsazeni_template', true); // Získání ID šablony obsazení
             $roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true); // Získání rolí
-            $all_confirmed = true; // Předpoklad, že všechny role jsou potvrzena
+            $all_confirmed = true; // Předpoklad, že všechny role jsou potvrzeny
             $has_substitute = false; // Předpoklad, že žádná role nemá záskok
             $pickup_location = ''; // Výchozí hodnota pro místo vyzvednutí
             $pickup_time = ''; // Výchozí hodnota pro čas vyzvednutí
@@ -414,32 +466,39 @@ function my_team_plugin_display_moje_ksefty() {
             }
             $formatted_date = date_i18n('D d.m.Y', strtotime($event_date)); // Formátování data
             $output .= '<tr>';
-            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($formatted_date) . '</a></td>'; // Přidání odkazu na termín
-            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($location) . '</a></td>'; // Přidání odkazu na lokaci
-            $output .= '<td><a href="' . get_permalink() . '">' . get_the_title() . '</a></td>'; // Přidání odkazu na název
-            $output .= '<td><a href="' . get_permalink() . '" class="button kseft-status-button ' . esc_attr($obsazeni_class) . '">' . esc_html($obsazeni_text) . '</a></td>'; // Přidání odkazu na stav obsazení
-            $output .= '<td><a href="' . get_permalink() . '">' . esc_html($status) . '</a></td>'; // Přidání odkazu na stav
+            $output .= '<td><a href="' . esc_url(get_permalink()) . '">' . esc_html($formatted_date) . '</a></td>';
+            $output .= '<td><a href="' . esc_url(get_permalink()) . '">' . esc_html($location) . '</a></td>';
+            $output .= '<td><a href="' . esc_url(get_permalink()) . '">' . esc_html(get_the_title()) . '</a></td>';
+            $output .= '<td><a href="' . esc_url(get_permalink()) . '" class="button kseft-status-button ' . esc_attr($obsazeni_class) . '">' . esc_html($obsazeni_text) . '</a></td>';
+            $output .= '<td><a href="' . esc_url(get_permalink()) . '">' . esc_html($status) . '</a></td>';
             $output .= '</tr>';
         }
         $output .= '</tbody>';
         $output .= '</table>';
-        wp_reset_postdata(); // Resetování dotazu
+        wp_reset_postdata();
     } else {
-        $output .= '<p>Žádné Akce nejsou k dispozici.</p>'; // Zobrazení zprávy, pokud nejsou žádné kšefty
+        $output .= '<p>' . esc_html__('Žádné Akce nejsou k dispozici.', $plugin_text_domain) . '</p>';
     }
     $output .= '</div>';
-    error_log('Output: ' . $output); // Logování výstupu
+    // error_log('Output: ' . $output); // Can be verbose
     return $output;
 }
-add_shortcode('display_moje_ksefty', 'my_team_plugin_display_moje_ksefty'); // Přidání shortcode pro zobrazení mých kšeftů
+add_shortcode('display_moje_ksefty', 'my_team_plugin_display_moje_ksefty');
 
-function my_team_plugin_add_meta_boxes() {
-    add_meta_box('kseft_details', 'Kšeft Details', 'my_team_plugin_render_meta_box', 'kseft', 'normal', 'high'); // Přidání metaboxu pro detaily kšeftu
+// Consolidated meta box registration for 'kseft' CPT
+function my_team_plugin_add_kseft_meta_boxes() {
+    $plugin_text_domain = 'my-band-plugin';
+    add_meta_box('kseft_main_details', __('Detaily Kšeftu', $plugin_text_domain), 'my_team_plugin_render_kseft_main_details_meta_box', 'kseft', 'normal', 'high');
+    add_meta_box('kseft_status_meta', __('Stav kšeftu', $plugin_text_domain), 'my_team_plugin_render_kseft_status_meta_box', 'kseft', 'side', 'default');
 }
-add_action('add_meta_boxes', 'my_team_plugin_add_meta_boxes'); // Přidání akce pro přidání metaboxů
+add_action('add_meta_boxes_kseft', 'my_team_plugin_add_kseft_meta_boxes');
 
-function my_team_plugin_render_meta_box($post) {
-    $location = get_post_meta($post->ID, 'kseft_location', true); // Získání lokace
+
+// This function seems to be the more complete one for 'kseft' CPT details. Renamed from my_team_plugin_render_meta_box
+function my_team_plugin_render_kseft_main_details_meta_box($post) {
+    wp_nonce_field('my_team_plugin_save_kseft_details_nonce', 'kseft_details_nonce_field');
+    $plugin_text_domain = 'my-band-plugin';
+    $location = get_post_meta($post->ID, 'kseft_location', true);
     $meeting_time = get_post_meta($post->ID, 'kseft_meeting_time', true); // Získání času srazu
     $event_date = get_post_meta($post->ID, 'kseft_event_date', true); // Získání data události
     $performance_start = get_post_meta($post->ID, 'kseft_performance_start', true); // Získání začátku vystoupení
@@ -496,32 +555,41 @@ function my_team_plugin_render_meta_box($post) {
 }
 
 function my_team_plugin_save_meta_box_data($post_id) {
-    if (array_key_exists('kseft_location', $_POST)) {
-        update_post_meta($post_id, 'kseft_location', sanitize_text_field($_POST['kseft_location'])); // Uložení lokace
+    // Check if nonce is set.
+    if (!isset($_POST['kseft_details_nonce_field'])) {
+        return; // Changed from return $post_id to just return for clarity as $post_id is not always expected by save_post hook
     }
-    if (array_key_exists('kseft_meeting_time', $_POST)) {
-        update_post_meta($post_id, 'kseft_meeting_time', sanitize_text_field($_POST['kseft_meeting_time'])); // Uložení času srazu
+    // Verify that the nonce is valid.
+    if (!wp_verify_nonce(sanitize_key($_POST['kseft_details_nonce_field']), 'my_team_plugin_save_kseft_details_nonce')) {
+        return;
     }
-    if (array_key_exists('kseft_event_date', $_POST)) {
-        update_post_meta($post_id, 'kseft_event_date', sanitize_text_field($_POST['kseft_event_date'])); // Uložení data události
+    // If this is an autosave, our form has not been submitted, so we don't want to do anything.
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
     }
-    if (array_key_exists('kseft_performance_start', $_POST)) {
-        update_post_meta($post_id, 'kseft_performance_start', sanitize_text_field($_POST['kseft_performance_start'])); // Uložení začátku vystoupení
+    // Check the user's permissions.
+    // Note: 'save_post_kseft' already ensures the post type is 'kseft'.
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
     }
-    if (array_key_exists('kseft_performance_end', $_POST)) {
-        update_post_meta($post_id, 'kseft_performance_end', sanitize_text_field($_POST['kseft_performance_end'])); // Uložení konce vystoupení
-    }
-    if (array_key_exists('kseft_status', $_POST)) {
-        update_post_meta($post_id, 'kseft_status', sanitize_text_field($_POST['kseft_status'])); // Uložení stavu
-    }
-    if (array_key_exists('kseft_clothing', $_POST)) {
-        update_post_meta($post_id, 'kseft_clothing', sanitize_text_field($_POST['kseft_clothing'])); // Uložení oblečení
-    }
-    if (array_key_exists('kseft_responsible_for_drinks', $_POST)) {
-        update_post_meta($post_id, 'kseft_responsible_for_drinks', sanitize_text_field($_POST['kseft_responsible_for_drinks'])); // Uložení odpovědného za pitný režim
+
+    $meta_to_save = array(
+        'kseft_location', 'kseft_meeting_time', 'kseft_event_date',
+        'kseft_performance_start', 'kseft_performance_end',
+        'kseft_clothing', 'kseft_responsible_for_drinks'
+        // kseft_status is saved in my_team_plugin_save_kseft_status_meta_data
+        // kseft_description (if it's a meta field using wp_editor) would be: 'kseft_description_meta_field' => 'wp_kses_post'
+    );
+
+    foreach ($meta_to_save as $key) {
+        if (isset($_POST[$key])) {
+            // Assuming all these fields are simple text fields for now.
+            // If any field expects HTML or specific formats, use appropriate sanitization like wp_kses_post or custom validation.
+            update_post_meta($post_id, $key, sanitize_text_field(wp_unslash($_POST[$key])));
+        }
     }
 }
-add_action('save_post', 'my_team_plugin_save_meta_box_data'); // Přidání akce pro uložení metaboxů
+add_action('save_post_kseft', 'my_team_plugin_save_meta_box_data');
 
 function my_team_plugin_display_kseft_details($content) {
     if (is_singular('kseft')) {
@@ -1356,379 +1424,414 @@ function my_team_plugin_log_error($message) {
     // }
 }
 
+/**
+ * Generates HTML for a login form.
+ * @param string $password_field_name The name attribute for the password input field.
+ * @param string $title The title displayed above the form.
+ * @param string $nonce_action The action name for the nonce.
+ * @param string $nonce_field_name The name attribute for the nonce input field.
+ * @return string HTML output for the login form.
+ */
+function my_team_plugin_get_login_form_html($password_field_name, $title, $nonce_action, $nonce_field_name) {
+    $plugin_text_domain = 'my-band-plugin';
+    ob_start();
+    ?>
+    <!DOCTYPE html>
+    <html <?php language_attributes(); ?>>
+    <head>
+        <meta charset="<?php bloginfo('charset'); ?>">
+        <title><?php echo esc_html($title); ?></title>
+        <style>
+            body { background-color: #f0f0f0; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+            .login-container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+            .login-container h2 { margin-bottom: 20px; color: #0073aa; }
+            .login-container input[type="password"] { width: 80%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+            .login-container input[type="submit"] { padding: 10px 20px; background-color: #0073aa; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+            .login-container input[type="submit"]:hover { background-color: #005177; }
+        </style>
+        <?php wp_head(); ?>
+    </head>
+    <body>
+        <div class="login-container">
+            <h2><?php echo esc_html($title); ?></h2>
+            <form method="post" action="<?php echo esc_url(get_permalink()); ?>">
+                <input type="password" name="<?php echo esc_attr($password_field_name); ?>" placeholder="<?php esc_attr_e('Heslo', $plugin_text_domain); ?>">
+                <br>
+                <?php wp_nonce_field($nonce_action, $nonce_field_name); ?>
+                <input type="submit" value="<?php esc_attr_e('Přihlásit', $plugin_text_domain); ?>">
+            </form>
+        </div>
+        <?php wp_footer(); ?>
+    </body>
+    </html>
+    <?php
+    return ob_get_clean();
+}
 
+/**
+ * Generates HTML for a role selection form.
+ * @param string $options_html HTML string of select options.
+ * @param string $nonce_action The action name for the nonce.
+ * @param string $nonce_field_name The name attribute for the nonce input field.
+ * @return string HTML output for the role selection form.
+ */
+function my_team_plugin_get_role_selection_form($options_html, $nonce_action, $nonce_field_name) {
+    $plugin_text_domain = 'my-band-plugin';
+    ob_start();
+    ?>
+    <!DOCTYPE html>
+     <html <?php language_attributes(); ?>>
+    <head>
+        <meta charset="<?php bloginfo('charset'); ?>">
+        <title><?php esc_html_e('Výběr role', $plugin_text_domain); ?></title>
+         <style>
+            body { background-color: #f0f0f0; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+            .login-container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+            .login-container h2 { margin-bottom: 20px; color: #0073aa; }
+            .login-container select { width: 80%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+            .login-container input[type="submit"] { padding: 10px 20px; background-color: #0073aa; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+            .login-container input[type="submit"]:hover { background-color: #005177; }
+        </style>
+        <?php wp_head(); ?>
+    </head>
+    <body>
+        <div class="login-container">
+            <h2><?php esc_html_e('Vyberte roli', $plugin_text_domain); ?></h2>
+            <form method="post" action="<?php echo esc_url(get_permalink()); ?>">
+                <select name="selected_role_id">
+                    <?php echo $options_html; // Already escaped in generation ?>
+                </select>
+                <br>
+                <?php wp_nonce_field($nonce_action, $nonce_field_name); ?>
+                <input type="submit" value="<?php esc_attr_e('Potvrdit výběr', $plugin_text_domain); ?>">
+            </form>
+        </div>
+        <?php wp_footer(); ?>
+    </body>
+    </html>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * Handles password protection for specific pages for non-logged-in users.
+ */
 function my_team_plugin_check_password() {
+    $plugin_text_domain = 'my-band-plugin';
+
+    // For '/ksefty' page
     if (is_page('ksefty') && !is_user_logged_in()) {
-        if (isset($_COOKIE['manageKseftAccess']) && $_COOKIE['manageKseftAccess'] === md5(get_option('my_team_plugin_manage_kseft_password', 'heslo123'))) {
-            return; // Pokud je cookie nastavena, nevyžadovat heslo znovu
+        $ksefty_page_password = get_option('my_team_plugin_manage_kseft_password', 'heslo123'); // Default for safety
+        $cookie_name = 'manageKseftAccess_' . COOKIEHASH;
+        $nonce_action = 'my_team_plugin_ksefty_login_nonce';
+        $nonce_field_name = 'manage_kseft_password_nonce';
+
+        // Check if valid cookie exists
+        if (isset($_COOKIE[$cookie_name]) && hash_equals($_COOKIE[$cookie_name], wp_hash($ksefty_page_password, 'my_band_plugin_ksefty_access'))) {
+            return; // Valid cookie exists
         }
-        $password = get_option('my_team_plugin_manage_kseft_password', 'heslo123');
-        if (!isset($_POST['manage_kseft_password']) || $_POST['manage_kseft_password'] !== $password) {
-            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['manage_kseft_password'])) {
-                echo '<p style="color:red;">Přístup zamítnut. Nesprávné heslo.</p>';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST[$nonce_field_name]) && wp_verify_nonce(sanitize_key(wp_unslash($_POST[$nonce_field_name])), $nonce_action)) {
+            if (isset($_POST['manage_kseft_password']) && hash_equals(wp_hash(wp_unslash($_POST['manage_kseft_password']), 'my_band_plugin_ksefty_access'), wp_hash($ksefty_page_password, 'my_band_plugin_ksefty_access'))) {
+                setcookie($cookie_name, wp_hash($ksefty_page_password, 'my_band_plugin_ksefty_access'), time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                wp_redirect(get_permalink());
+                exit;
+            } else {
+                wp_die(
+                    sprintf('<p style="color:red;">%s</p>', esc_html__('Přístup zamítnut. Nesprávné heslo.', $plugin_text_domain)) .
+                    my_team_plugin_get_login_form_html('manage_kseft_password', __('Prosím zadejte heslo pro Kšefty', $plugin_text_domain), $nonce_action, $nonce_field_name),
+                    __('Přihlášení', $plugin_text_domain),
+                    array('response' => 403, 'back_link' => true)
+                );
             }
-            ?>
-            <!DOCTYPE html>
-            <html lang="cs">
-            <head>
-                <meta charset="UTF-8">
-                <title>Přihlášení</title>
-                <style>
-                    body {
-                        background-color: #f0f0f0;
-                        font-family: Arial, sans-serif;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                        margin: 0;
-                    }
-                    .login-container {
-                        background: #fff;
-                        padding: 30px;
-                        border-radius: 8px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                        text-align: center;
-                    }
-                    .login-container h2 {
-                        margin-bottom: 20px;
-                        color: #0073aa;
-                    }
-                    .login-container input[type="password"] {
-                        width: 80%;
-                        padding: 10px;
-                        margin-bottom: 15px;
-                        border: 1px solid #ccc;
-                        border-radius: 4px;
-                        font-size: 16px;
-                    }
-                    .login-container input[type="submit"] {
-                        padding: 10px 20px;
-                        background-color: #0073aa;
-                        color: #fff;
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 16px;
-                    }
-                    .login-container input[type="submit"]:hover {
-                        background-color: #005177;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="login-container">
-                    <h2>Prosím zadejte heslo</h2>
-                    <form method="post">
-                        <input type="password" name="manage_kseft_password" placeholder="Heslo">
-                        <br>
-                        <input type="submit" value="Přihlásit">
-                    </form>
-                </div>
-            </body>
-            </html>
-            <?php
-            exit;
         } else {
-            setcookie('manageKseftAccess', md5($password), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+            // Display login form
+             wp_die(
+                my_team_plugin_get_login_form_html('manage_kseft_password', __('Prosím zadejte heslo pro Kšefty', $plugin_text_domain), $nonce_action, $nonce_field_name),
+                __('Přihlášení', $plugin_text_domain),
+                array('response' => 200, 'back_link' => true)
+            );
         }
-    } elseif (is_page('moje-ksefty') && !is_user_logged_in()) {
-        // Pokud cookie existuje, ale je neplatná (např. "undefined"), vymažeme ji
-        if (isset($_COOKIE['selectedRoleId']) && ($_COOKIE['selectedRoleId'] === 'undefined' || !ctype_digit($_COOKIE['selectedRoleId']))) {
-            setcookie('selectedRoleId', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN);
+    }
+    // For '/moje-ksefty' page
+    elseif (is_page('moje-ksefty') && !is_user_logged_in()) {
+        $selected_role_id_cookie_name = 'selectedRoleId_' . COOKIEHASH;
+        $selected_role_text_cookie_name = 'selectedRoleText_' . COOKIEHASH;
+        $allowed_roles_cookie_name = 'allowedRoles_' . COOKIEHASH;
+        $role_password_nonce_action = 'my_team_plugin_role_password_login_nonce';
+        $role_password_nonce_field = 'role_password_nonce';
+        $role_selection_nonce_action = 'my_team_plugin_role_selection_nonce';
+        $role_selection_nonce_field = 'selected_role_id_nonce';
+
+
+        // If role cookie is invalid (e.g., "undefined"), clear it and related cookies
+        if (isset($_COOKIE[$selected_role_id_cookie_name]) && ($_COOKIE[$selected_role_id_cookie_name] === 'undefined' || !ctype_digit(strval($_COOKIE[$selected_role_id_cookie_name])))) {
+            setcookie($selected_role_id_cookie_name, '', time() - YEAR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+            setcookie($selected_role_text_cookie_name, '', time() - YEAR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+            setcookie($allowed_roles_cookie_name, '', time() - YEAR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
         }
-        // Nová část: pokud již byla role odeslána, proveď okamžitý redirect před výstupem
-        if (isset($_POST['selected_role_id'])) {
-            $selected_role_id = intval($_POST['selected_role_id']);
-            $role = get_post($selected_role_id);
-            $role_title = $role ? $role->post_title : 'Neznámá role';
-            setcookie('selectedRoleId', $selected_role_id, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
-            setcookie('selectedRoleText', urlencode($role_title), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
-            wp_redirect(site_url('/moje-ksefty'));
-            exit;
-        }
-        // Pokud cookie již existuje, nic neprovádíme
-        if (isset($_COOKIE['selectedRoleId'])) {
-            return; // Pokud je role již vybrána, nevyžadovat heslo znovu
-        }
-        $roles = get_posts(array('post_type' => 'role', 'numberposts' => -1));
-        $role_passwords = array();
-        foreach ($roles as $role) {
-            $role_passwords[$role->ID] = get_post_meta($role->ID, 'role_password', true);
-        }
-        $valid_password = false;
-        $matching_roles = array();
-        if (isset($_POST['role_password']) && !empty($_POST['role_password'])) {
-            foreach ($role_passwords as $role_id => $password) {
-                if ($_POST['role_password'] === $password) {
-                    $valid_password = true;
-                    $matching_roles[] = $role_id;
+
+        // If a role was just selected from the form
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST[$role_selection_nonce_field]) && wp_verify_nonce(sanitize_key(wp_unslash($_POST[$role_selection_nonce_field])), $role_selection_nonce_action)) {
+            if (isset($_POST['selected_role_id'])) {
+                $posted_role_id = intval($_POST['selected_role_id']);
+                $allowed_roles_from_cookie = isset($_COOKIE[$allowed_roles_cookie_name]) ? array_map('intval', explode(',', sanitize_text_field(wp_unslash($_COOKIE[$allowed_roles_cookie_name])))) : array();
+
+                if (!empty($allowed_roles_from_cookie) && in_array($posted_role_id, $allowed_roles_from_cookie)) {
+                    $role_obj = get_post($posted_role_id);
+                    if ($role_obj && $role_obj->post_type === 'role') {
+                        $role_title_val = $role_obj->post_title;
+                        setcookie($selected_role_id_cookie_name, $posted_role_id, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                        setcookie($selected_role_text_cookie_name, urlencode($role_title_val), time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                        wp_redirect(get_permalink());
+                        exit;
+                    }
                 }
             }
         }
-        if (!$valid_password) {
-            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role_password'])) {
-                echo '<p style="color:red;">Přístup zamítnut. Nesprávné heslo.</p>';
+
+        // If a valid role cookie already exists
+        if (isset($_COOKIE[$selected_role_id_cookie_name]) && ctype_digit(strval($_COOKIE[$selected_role_id_cookie_name]))) {
+             $check_role = get_post(intval($_COOKIE[$selected_role_id_cookie_name]));
+             if ($check_role && $check_role->post_type === 'role') { return; }
+             else { // clear cookies if role is no longer valid 
+                setcookie($selected_role_id_cookie_name, '', time() - YEAR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                setcookie($selected_role_text_cookie_name, '', time() - YEAR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                // We might not want to clear allowed_roles_cookie_name here, as the password might still be valid for other roles.
+             }
+        }
+
+        // No valid cookie, no valid POST for role selection, so process password or show form
+        $roles_with_passwords = get_posts(array('post_type' => 'role', 'numberposts' => -1, 'meta_query' => array(array('key' => 'role_password', 'compare' => 'EXISTS'))));
+        $role_passwords_map = array();
+        foreach ($roles_with_passwords as $role_obj_item) {
+            $password_meta = get_post_meta($role_obj_item->ID, 'role_password', true);
+            if (!empty($password_meta)) {
+                $role_passwords_map[$role_obj_item->ID] = $password_meta;
             }
-            ?>
-            <!DOCTYPE html>
-            <html lang="cs">
-            <head>
-                <meta charset="UTF-8">
-                <title>Přihlášení</title>
-                <style>
-                    body {
-                        background-color: #f0f0f0;
-                        font-family: Arial, sans-serif;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                        margin: 0;
+        }
+
+        $valid_password_entered = false;
+        $matching_roles_for_password = array();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST[$role_password_nonce_field]) && wp_verify_nonce(sanitize_key(wp_unslash($_POST[$role_password_nonce_field])), $role_password_nonce_action)) {
+            if (isset($_POST['role_password']) && !empty($_POST['role_password'])) {
+                $submitted_password = wp_unslash($_POST['role_password']);
+                foreach ($role_passwords_map as $role_id_map_item => $stored_password) {
+                    if ($submitted_password === $stored_password) { // Plain text comparison.
+                        $valid_password_entered = true;
+                        $matching_roles_for_password[] = $role_id_map_item;
                     }
-                    .login-container {
-                        background: #fff;
-                        padding: 30px;
-                        border-radius: 8px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                        text-align: center;
-                    }
-                    .login-container h2 {
-                        margin-bottom: 20px;
-                        color: #0073aa;
-                    }
-                    .login-container input[type="password"] {
-                        width: 80%;
-                        padding: 10px;
-                        margin-bottom: 15px;
-                        border: 1px solid #ccc;
-                        border-radius: 4px;
-                        font-size: 16px;
-                    }
-                    .login-container input[type="submit"] {
-                        padding: 10px 20px;
-                        background-color: #0073aa;
-                        color: #fff;
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 16px;
-                    }
-                    .login-container input[type="submit"]:hover {
-                        background-color: #005177;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="login-container">
-                    <h2>Prosím zadejte heslo</h2>
-                    <form method="post">
-                        <input type="password" name="role_password" placeholder="Heslo">
-                        <br>
-                        <input type="submit" value="Přihlásit">
-                    </form>
-                </div>
-            </body>
-            </html>
-            <?php
-            exit;
-        } elseif (count($matching_roles) > 1) {
-            // Přidáno: uložení cookie s povolenými rolemi
-            setcookie('allowedRoles', implode(',', $matching_roles), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
-            ?>
-            <!DOCTYPE html>
-            <html lang="cs">
-            <head>
-                <meta charset="UTF-8">
-                <title>Výběr role</title>
-                <style>
-                    body {
-                        background-color: #f0f0f0;
-                        font-family: Arial, sans-serif;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                        margin: 0;
-                    }
-                    .login-container {
-                        background: #fff;
-                        padding: 30px;
-                        border-radius: 8px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                        text-align: center;
-                    }
-                    .login-container h2 {
-                        margin-bottom: 20px;
-                        color: #0073aa;
-                    }
-                    .login-container select {
-                        width: 80%;
-                        padding: 10px;
-                        margin-bottom: 15px;
-                        border: 1px solid #ccc;
-                        border-radius: 4px;
-                        font-size: 16px;
-                    }
-                    .login-container input[type="submit"] {
-                        padding: 10px 20px;
-                        background-color: #0073aa;
-                        color: #fff;
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 16px;
-                    }
-                    .login-container input[type="submit"]:hover {
-                        background-color: #005177;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="login-container">
-                    <h2>Vyberte roli</h2>
-                    <form method="post">
-                        <select name="selected_role_id">
-                            <?php foreach ($matching_roles as $role_id) : ?>
-                                <option value="<?php echo esc_attr($role_id); ?>"><?php echo esc_html(get_the_title($role_id)); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <br>
-                        <input type="submit" value="Přihlásit">
-                    </form>
-                </div>
-            </body>
-            </html>
-            <?php
-            exit;
+                }
+            }
+        }
+
+        if ($valid_password_entered) {
+            if (count($matching_roles_for_password) === 1) {
+                $selected_role_id_val_single = $matching_roles_for_password[0];
+                $role_obj_single = get_post($selected_role_id_val_single);
+                $role_title_single = $role_obj_single ? $role_obj_single->post_title : __('Neznámá role', $plugin_text_domain);
+                setcookie($selected_role_id_cookie_name, $selected_role_id_val_single, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                setcookie($selected_role_text_cookie_name, urlencode($role_title_single), time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                setcookie($allowed_roles_cookie_name, $selected_role_id_val_single, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                wp_redirect(get_permalink());
+                exit;
+            } else { // Multiple roles match the password
+                setcookie($allowed_roles_cookie_name, implode(',', $matching_roles_for_password), time() + HOUR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                $options_html = '';
+                foreach ($matching_roles_for_password as $role_id_option_item) {
+                    $options_html .= sprintf('<option value="%s">%s</option>', esc_attr($role_id_option_item), esc_html(get_the_title($role_id_option_item)));
+                }
+                wp_die(
+                    my_team_plugin_get_role_selection_form($options_html, $role_selection_nonce_action, $role_selection_nonce_field),
+                    __('Výběr role', $plugin_text_domain),
+                    array('response' => 200, 'back_link' => true)
+                );
+            }
         } else {
-            $selected_role_id = $matching_roles[0];
-            $role = get_post($selected_role_id);
-            $role_title = $role ? $role->post_title : 'Neznámá role';
-            setcookie('selectedRoleId', $selected_role_id, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
-            setcookie('selectedRoleText', urlencode($role_title), time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
-            setcookie('allowedRoles', implode(',', $matching_roles), time() + 3600, COOKIEPATH, COOKIE_DOMAIN); // Nastavení cookie allowedRoles
-            wp_redirect(site_url('/moje-ksefty'));
-            exit;
+            $error_message_html = ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['role_password'])) ? sprintf('<p style="color:red;">%s</p>', esc_html__('Přístup zamítnut. Nesprávné heslo.', $plugin_text_domain)) : '';
+            wp_die(
+                $error_message_html . my_team_plugin_get_login_form_html('role_password', __('Prosím zadejte heslo pro Vaši roli', $plugin_text_domain), $role_password_nonce_action, $role_password_nonce_field),
+                __('Přihlášení k roli', $plugin_text_domain),
+                array('response' => ($_SERVER['REQUEST_METHOD'] === 'POST' ? 403 : 200), 'back_link' => true)
+            );
         }
     }
 }
-add_action('template_redirect', 'my_team_plugin_check_password');
+add_action('template_redirect', 'my_team_plugin_check_password', 1);
 
 function my_team_plugin_display_selected_role() {
-    if (isset($_COOKIE['selectedRoleId'])) {
-        $role_id = intval($_COOKIE['selectedRoleId']);
-        $role_title = urldecode($_COOKIE['selectedRoleText']);
-        $allowed_roles = isset($_COOKIE['allowedRoles']) ? explode(',', $_COOKIE['allowedRoles']) : array();
-        echo '<div id="selected-role-display" style="cursor: pointer;">Zvolená role: ' . esc_html($role_title);
-        if (count($allowed_roles) > 1) {
-            echo ' (klikněte pro změnu)';
+    $plugin_text_domain = 'my-band-plugin';
+    $selected_role_id_cookie_name = 'selectedRoleId_' . COOKIEHASH;
+    $selected_role_text_cookie_name = 'selectedRoleText_' . COOKIEHASH;
+    $allowed_roles_cookie_name = 'allowedRoles_' . COOKIEHASH;
+
+    if (isset($_COOKIE[$selected_role_id_cookie_name]) && isset($_COOKIE[$selected_role_text_cookie_name])) {
+        $role_title = urldecode($_COOKIE[$selected_role_text_cookie_name]);
+        $allowed_roles = isset($_COOKIE[$allowed_roles_cookie_name]) ? explode(',', sanitize_text_field(wp_unslash($_COOKIE[$allowed_roles_cookie_name]))) : array();
+        
+        echo '<div id="selected-role-display" class="my-band-plugin-selected-role-footer" style="position: fixed; bottom: 10px; right: 10px; padding: 10px; background: #fff; border: 1px solid #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.1); z-index: 1000; border-radius: 5px;">';
+        echo esc_html__('Zvolená role:', $plugin_text_domain) . ' <strong>' . esc_html($role_title) . '</strong>';
+        if (count($allowed_roles) > 1 || (count($allowed_roles) === 1 && $allowed_roles[0] !== $_COOKIE[$selected_role_id_cookie_name])) { // Show change if multiple roles allowed OR if the single allowed role is not the currently selected one (edge case)
+            $clear_role_link = add_query_arg('clear_selected_role_mbp', '1', site_url('/moje-ksefty')); // Unique query arg
+            echo ' (<a href="' . esc_url($clear_role_link) . '">' . esc_html__('změnit', $plugin_text_domain) . '</a>)';
         }
         echo '</div>';
     }
 }
 add_action('wp_footer', 'my_team_plugin_display_selected_role');
 
-function my_team_plugin_copy_kseft() {
+// Handle clearing of selected role cookie
+function my_team_plugin_clear_selected_role_cookie() {
+    if (isset($_GET['clear_selected_role_mbp']) && $_GET['clear_selected_role_mbp'] === '1' && is_page('moje-ksefty')) {
+        $selected_role_id_cookie_name = 'selectedRoleId_' . COOKIEHASH;
+        $selected_role_text_cookie_name = 'selectedRoleText_' . COOKIEHASH;
+        // Do not clear allowedRolesCookie here, it's tied to password entry.
+        // Only clear the specific choice of role.
+        setcookie($selected_role_id_cookie_name, '', time() - YEAR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+        setcookie($selected_role_text_cookie_name, '', time() - YEAR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+        wp_redirect(remove_query_arg('clear_selected_role_mbp', site_url('/moje-ksefty')));
+        exit;
+    }
+}
+add_action('template_redirect', 'my_team_plugin_clear_selected_role_cookie', 0); // Run very early
+
+
+function my_team_plugin_copy_kseft_init() { // Renamed to avoid conflict with potential future WP core function
+    $plugin_text_domain = 'my-band-plugin';
     if (!isset($_GET['copy_kseft_id'])) {
         return;
     }
-
     $original_kseft_id = intval($_GET['copy_kseft_id']);
+
+    if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_key(wp_unslash($_GET['_wpnonce'])), 'copy_kseft_nonce_' . $original_kseft_id)) {
+        wp_die(__('Neplatný požadavek na kopírování (chyba nonce).', $plugin_text_domain), __('Chyba', $plugin_text_domain), array('response' => 403));
+    }
+
+    // Assuming copy action should be restricted to users who can edit the original and create new ones.
+    if (!current_user_can('edit_post', $original_kseft_id) || !current_user_can(get_post_type_object('kseft')->cap->create_posts)) {
+        wp_die(__('Nemáte oprávnění k provedení této akce.', $plugin_text_domain), __('Chyba', $plugin_text_domain), array('response' => 403));
+    }
+
     $original_kseft = get_post($original_kseft_id);
 
     if (!$original_kseft || $original_kseft->post_type !== 'kseft') {
-        return;
+        wp_die(__('Původní kšeft nebyl nalezen.', $plugin_text_domain), __('Chyba', $plugin_text_domain), array('response' => 404));
     }
 
     $new_kseft_data = array(
-        'post_title' => $original_kseft->post_title . ' (Kopie)', // Nastavení názvu akce
+        'post_title' => $original_kseft->post_title . ' (' . __('Kopie', $plugin_text_domain) . ')',
+        'post_content' => $original_kseft->post_content,
         'post_type' => 'kseft',
-        'post_status' => 'draft'
+        'post_status' => 'draft',
+        'post_author' => get_current_user_id(),
     );
 
-    $new_kseft_id = wp_insert_post($new_kseft_data);
+    $new_kseft_id = wp_insert_post($new_kseft_data, true);
 
     if (is_wp_error($new_kseft_id)) {
-        wp_die('Chyba při kopírování kšeftu.');
+        wp_die(sprintf(__('Chyba při kopírování kšeftu: %s', $plugin_text_domain), $new_kseft_id->get_error_message()), __('Chyba', $plugin_text_domain));
     }
 
-    $meta_keys = array(
-        'kseft_location',
-        'kseft_meeting_time',
-        'kseft_performance_start',
-        'kseft_performance_end',
-        'kseft_obsazeni_template',
-        'kseft_status',
-        'kseft_clothing',
-        'kseft_description',
-        'kseft_responsible_for_drinks'
+    $meta_keys_to_copy = array(
+        'kseft_location', 'kseft_meeting_time', 'kseft_performance_start',
+        'kseft_performance_end', 'kseft_obsazeni_template', 'kseft_status',
+        'kseft_clothing', 'kseft_responsible_for_drinks'
+        // 'kseft_description' is main content, copied via post_content.
     );
 
-    foreach ($meta_keys as $meta_key) {
+    foreach ($meta_keys_to_copy as $meta_key) {
         $meta_value = get_post_meta($original_kseft_id, $meta_key, true);
-        update_post_meta($new_kseft_id, $meta_value, $meta_value);
+        if ($meta_value !== '') {
+            $sanitized_value = is_array($meta_value) ? array_map('sanitize_text_field', $meta_value) : sanitize_text_field($meta_value);
+            update_post_meta($new_kseft_id, $meta_key, $sanitized_value);
+        }
     }
-
-    // Nastavení nového data kšeftu na dnešek
     update_post_meta($new_kseft_id, 'kseft_event_date', date('Y-m-d'));
 
-    // Přesměrování na stránku pro správu nového kšeftu s předvyplněnými daty
-    wp_redirect(add_query_arg(array('kseft_id' => $new_kseft_id), site_url('/manage-kseft')));
+    $edit_url = add_query_arg(array('post' => $new_kseft_id, 'action' => 'edit'), admin_url('post.php'));
+    wp_redirect($edit_url);
     exit;
 }
+add_action('template_redirect', 'my_team_plugin_copy_kseft_init');
 
-// Přidání nové AJAX akce pro kontrolu přístupu na kartu kšeftu
+
 function my_team_plugin_check_kseft_access() {
-    check_ajax_referer('wp_rest', 'nonce');
+    check_ajax_referer('my_band_plugin_ajax_nonce', 'nonce');
+    $plugin_text_domain = 'my-band-plugin';
+    $kseft_id = isset($_POST['kseft_id']) ? intval($_POST['kseft_id']) : 0;
 
-    $kseft_id = intval($_POST['kseft_id']);
+    if (empty($kseft_id)) {
+        wp_send_json_error(array('message' => __('Chybí ID akce.', $plugin_text_domain)));
+    }
+
     $current_user = wp_get_current_user();
-
-    // Kontrola, zda je uživatel přihlášen
     if (!$current_user->exists()) {
-        wp_send_json_error(array('message' => 'Uživatel není přihlášen.'));
+        wp_send_json_error(array('message' => __('Uživatel není přihlášen.', $plugin_text_domain)));
     }
 
-    // Kontrola, zda má uživatel oprávnění k přístupu
-    $allowed_roles = get_post_meta($kseft_id, 'allowed_roles', true);
-    if (!is_array($allowed_roles) || !array_intersect($current_user->roles, $allowed_roles)) {
-        wp_send_json_error(array('message' => 'Nemáte oprávnění k přístupu na tuto stránku.'));
+    // This logic needs to be clearly defined. 'allowed_roles' meta key is not standard.
+    // If it refers to WP roles for who can view/edit this kseft:
+    $allowed_wp_roles_for_kseft = get_post_meta($kseft_id, 'allowed_wp_roles_for_kseft', true); // Example meta key
+    if (empty($allowed_wp_roles_for_kseft) || !is_array($allowed_wp_roles_for_kseft)) {
+         // Fallback to check if user can edit the post if no specific roles are defined for access
+        if (!current_user_can('edit_post', $kseft_id)) {
+            wp_send_json_error(array('message' => __('Nemáte oprávnění k přístupu k této akci (nejsou definována oprávnění).', $plugin_text_domain)));
+        }
+    } else {
+        $user_has_access = false;
+        foreach ($current_user->roles as $user_role_slug) {
+            if (in_array($user_role_slug, $allowed_wp_roles_for_kseft)) {
+                $user_has_access = true;
+                break;
+            }
+        }
+        if (!$user_has_access && !current_user_can('edit_others_posts')) { // Allow those who can edit any post
+            wp_send_json_error(array('message' => __('Nemáte oprávnění k přístupu na tuto stránku (role).', $plugin_text_domain)));
+        }
     }
-
-    wp_send_json_success(array('message' => 'Přístup povolen.'));
+    wp_send_json_success(array('message' => __('Přístup povolen.', $plugin_text_domain)));
 }
-add_action('wp_ajax_check_kseft_access', 'my_team_plugin_check_kseft_access'); // AJAX akce pro přihlášené uživatele
-add_action('wp_ajax_nopriv_check_kseft_access', 'my_team_plugin_check_kseft_access'); // AJAX akce pro nepřihlášené uživatele
+add_action('wp_ajax_check_kseft_access', 'my_team_plugin_check_kseft_access');
+// No nopriv for this as it checks logged-in user roles.
+
 
 function my_team_plugin_restrict_kseft_access() {
-    if (is_singular('kseft')) {
+    if (is_singular('kseft') && is_main_query()) {
         $kseft_id = get_the_ID();
-        $selected_role_id = isset($_COOKIE['selectedRoleId']) ? intval($_COOKIE['selectedRoleId']) : 0;
+        $plugin_text_domain = 'my-band-plugin';
 
-        // Pokud není v cookies nastavena role, zobrazíme chybu 404
+        if (is_user_logged_in()) {
+            // Logged-in users: Rely on WordPress's capabilities.
+            // If 'kseft' CPT is 'public' => true, any logged-in user (even subscriber) can see it by default.
+            // If you need finer control, you'd use custom capabilities with map_meta_cap or check specific roles.
+            // Example: if (!current_user_can('read_kseft_post', $kseft_id)) { /* deny */ }
+            return;
+        }
+
+        // Non-logged-in user access logic (based on cookie)
+        $selected_role_id_cookie_name = 'selectedRoleId_' . COOKIEHASH;
+        $selected_role_id = isset($_COOKIE[$selected_role_id_cookie_name]) ? intval($_COOKIE[$selected_role_id_cookie_name]) : 0;
+
         if (!$selected_role_id) {
-            global $wp_query;
-            $wp_query->set_404();
-            status_header(404);
-            nocache_headers();
-            include(get_query_template('404'));
+            wp_redirect(site_url('/moje-ksefty?reason=no_role_selected&target_kseft=' . $kseft_id)); // Redirect to role selection/password page
             exit;
         }
 
-        // Získání šablony obsazení a kontrola, zda role odpovídá
         $obsazeni_template_id = get_post_meta($kseft_id, 'kseft_obsazeni_template', true);
+        if (empty($obsazeni_template_id)) { // If kseft has no template, access might be denied or handled differently
+            wp_redirect(site_url('/moje-ksefty?reason=no_template_assigned&target_kseft=' . $kseft_id));
+            exit;
+        }
         $template_roles = get_post_meta($obsazeni_template_id, 'obsazeni_template_roles', true);
 
         if (!is_array($template_roles) || !in_array($selected_role_id, $template_roles)) {
-            global $wp_query;
-            $wp_query->set_404();
-            status_header(404);
-            nocache_headers();
-            include(get_query_template('404'));
+            wp_redirect(site_url('/moje-ksefty?reason=role_mismatch&target_kseft=' . $kseft_id)); // Role from cookie not in this kseft
             exit;
         }
     }
 }
-add_action('template_redirect', 'my_team_plugin_restrict_kseft_access');
+add_action('template_redirect', 'my_team_plugin_restrict_kseft_access', 5);
 ?>
+
+[end of my-band-plugin/my-band-plugin.php]

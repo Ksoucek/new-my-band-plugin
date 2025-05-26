@@ -7,7 +7,7 @@ add_action('rest_api_init', function () {
     register_rest_route('google-calendar/v1', '/add-to-calendar', [
         'methods'  => 'POST',
         'callback' => 'handle_add_to_calendar_request',
-        'permission_callback' => '__return_true', // Změňte podle potřeby
+        'permission_callback' => function () { return current_user_can('edit_posts'); }
     ]);
 });
 
@@ -16,7 +16,7 @@ add_action('rest_api_init', function () {
     register_rest_route('google-calendar/v1', '/get-last-error', [
         'methods'  => 'GET',
         'callback' => 'handle_get_last_error_request',
-        'permission_callback' => '__return_true', // Změňte podle potřeby
+        'permission_callback' => function () { return current_user_can('manage_options'); }
     ]);
 });
 
@@ -103,23 +103,57 @@ function add_event_to_google_calendar($event_details) {
     $client->addScope(Google_Service_Calendar::CALENDAR);
 
     $service = new Google_Service_Calendar($client);
-
     $event = new Google_Service_Calendar_Event($event_details);
-    $event->setDescription($event_details['description']); // Přidání popisu
-
-    try {
-        $calendarId = 'olo0v28necdv27n6mg7psud2dc@group.calendar.google.com';
-        $event = $service->events->insert($calendarId, $event);
-        return [
-            'success' => true,
-            'event_id' => $event->getId()
-        ];
-    } catch (Exception $e) {
-        return [
-            'error' => 'Error adding event to Google Calendar.',
-            'details' => $e->getMessage()
-        ];
+    // Ensure description is set on the event object
+    if (isset($event_details['description'])) {
+        $event->setDescription($event_details['description']);
+    } else {
+        $event->setDescription(''); // Set empty string if not provided
     }
+
+    $max_retries = 5;
+    $retry_delay = 1000; // milliseconds
+
+    for ($attempt = 0; $attempt <= $max_retries; $attempt++) {
+        try {
+            $calendarId = 'olo0v28necdv27n6mg7psud2dc@group.calendar.google.com';
+            $created_event = $service->events->insert($calendarId, $event);
+            error_log(sprintf('[%s] Google Calendar Event created successfully. Event ID: %s', date('Y-m-d H:i:s'), $created_event->getId()));
+            return [
+                'success' => true,
+                'event_id' => $created_event->getId()
+            ];
+        } catch (Google_Service_Exception $e) {
+            $error_code = $e->getCode();
+            $error_message = $e->getMessage();
+            error_log(sprintf('[%s] Google_Service_Exception in add_event_to_google_calendar (Attempt %d/%d): Code %s, Message: %s', date('Y-m-d H:i:s'), $attempt + 1, $max_retries + 1, $error_code, $error_message));
+
+            if ($error_code == 429 && $attempt < $max_retries) {
+                $delay_seconds = ($retry_delay / 1000) * pow(2, $attempt);
+                error_log(sprintf('[%s] Rate limit exceeded. Retrying in %d seconds...', date('Y-m-d H:i:s'), $delay_seconds));
+                usleep($delay_seconds * 1000000); // usleep takes microseconds
+            } else {
+                return [
+                    'error' => 'Error adding event to Google Calendar after retries or for non-retryable error.',
+                    'details' => $error_message,
+                    'code' => $error_code
+                ];
+            }
+        } catch (Exception $e) {
+            $error_message = $e->getMessage();
+            error_log(sprintf('[%s] Generic Exception in add_event_to_google_calendar (Attempt %d/%d): Message: %s', date('Y-m-d H:i:s'), $attempt + 1, $max_retries + 1, $error_message));
+            // Do not retry for generic exceptions immediately, return error
+            return [
+                'error' => 'Error adding event to Google Calendar.',
+                'details' => $error_message
+            ];
+        }
+    }
+    // If all retries fail
+    return [
+        'error' => 'Failed to add event to Google Calendar after maximum retries.',
+        'details' => 'Exceeded rate limits or other persistent error.'
+    ];
 }
 
 // Přidání funkce pro aktualizaci Google akce
@@ -134,20 +168,52 @@ function updateGoogleCalendar($event_id, $details) {
     $client->addScope(Google_Service_Calendar::CALENDAR);
 
     $service = new Google_Service_Calendar($client);
+    $calendarId = 'olo0v28necdv27n6mg7psud2dc@group.calendar.google.com';
 
-    try {
-        $calendarId = 'olo0v28necdv27n6mg7psud2dc@group.calendar.google.com'; // Použití kalendář ID z jiného souboru
-        $event = $service->events->get($calendarId, $event_id);
-        $event->setSummary($details['summary']);
-        $event->setLocation($details['location']);
-        $event->setDescription($details['description']); // Přidání popisu
-        $event->setStart(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['start']['dateTime'], 'timeZone' => 'Europe/Prague')));
-        $event->setEnd(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['end']['dateTime'], 'timeZone' => 'Europe/Prague')));
-        $updatedEvent = $service->events->update($calendarId, $event->getId(), $event);
-        return true;
-    } catch (Exception $e) {
-        return false;
+    $max_retries = 5;
+    $retry_delay = 1000; // milliseconds
+
+    for ($attempt = 0; $attempt <= $max_retries; $attempt++) {
+        try {
+            $event = $service->events->get($calendarId, $event_id);
+            $event->setSummary($details['summary']);
+            $event->setLocation($details['location']);
+            // Ensure description is set on the event object
+            if (isset($details['description'])) {
+                $event->setDescription($details['description']);
+            } else {
+                $event->setDescription(''); // Set empty string if not provided
+            }
+            $event->setStart(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['start']['dateTime'], 'timeZone' => 'Europe/Prague')));
+            $event->setEnd(new Google_Service_Calendar_EventDateTime(array('dateTime' => $details['end']['dateTime'], 'timeZone' => 'Europe/Prague')));
+            
+            $updatedEvent = $service->events->update($calendarId, $event->getId(), $event);
+            error_log(sprintf('[%s] Google Calendar Event updated successfully. Event ID: %s', date('Y-m-d H:i:s'), $updatedEvent->getId()));
+            return true;
+        } catch (Google_Service_Exception $e) {
+            $error_code = $e->getCode();
+            $error_message = $e->getMessage();
+            error_log(sprintf('[%s] Google_Service_Exception in updateGoogleCalendar (Attempt %d/%d) for Event ID %s: Code %s, Message: %s', date('Y-m-d H:i:s'), $attempt + 1, $max_retries + 1, $event_id, $error_code, $error_message));
+
+            if ($error_code == 429 && $attempt < $max_retries) {
+                $delay_seconds = ($retry_delay / 1000) * pow(2, $attempt);
+                error_log(sprintf('[%s] Rate limit exceeded for update. Retrying in %d seconds...', date('Y-m-d H:i:s'), $delay_seconds));
+                usleep($delay_seconds * 1000000); // usleep takes microseconds
+            } else {
+                // Log final error and return false
+                error_log(sprintf('[%s] Failed to update event %s after retries or for non-retryable error. Code: %s, Message: %s', date('Y-m-d H:i:s'), $event_id, $error_code, $error_message));
+                return false; // Or return an error object/array if more detail is needed by caller
+            }
+        } catch (Exception $e) {
+            $error_message = $e->getMessage();
+            error_log(sprintf('[%s] Generic Exception in updateGoogleCalendar (Attempt %d/%d) for Event ID %s: Message: %s', date('Y-m-d H:i:s'), $attempt + 1, $max_retries + 1, $event_id, $error_message));
+            // Do not retry for generic exceptions immediately, return false
+            return false; // Or return an error object/array
+        }
     }
+    // If all retries fail
+    error_log(sprintf('[%s] Failed to update event %s after maximum retries due to persistent 429 errors.', date('Y-m-d H:i:s'), $event_id));
+    return false;
 }
 
 // Přidání funkce pro generování odkazu na Google Kalendářovou akci
@@ -206,14 +272,47 @@ function createGoogleCalendarEvent($kseftId, $eventDetails) {
     $event = new Google_Service_Calendar_Event($eventDetails);
     $event->setDescription($eventDetails['description']); // Přidání popisu
 
-    try {
-        $calendarId = 'primary';
-        $event = $service->events->insert($calendarId, $event);
-        update_post_meta($kseftId, 'google_calendar_event_id', $event->id); // Uložení ID události do meta dat příspěvku
-        return $event->id;
-    } catch (Exception $e) {
-        return false;
+    $service = new Google_Service_Calendar($client);
+    $event = new Google_Service_Calendar_Event($eventDetails);
+    // Ensure description is set on the event object
+    if (isset($eventDetails['description'])) {
+        $event->setDescription($eventDetails['description']);
+    } else {
+        $event->setDescription(''); // Set empty string if not provided
     }
+    
+    $calendarId = 'primary'; // Or specific calendar ID as needed
+    $max_retries = 5;
+    $retry_delay = 1000; // milliseconds
+
+    for ($attempt = 0; $attempt <= $max_retries; $attempt++) {
+        try {
+            $created_event = $service->events->insert($calendarId, $event);
+            update_post_meta($kseftId, 'google_calendar_event_id', $created_event->id);
+            error_log(sprintf('[%s] Google Calendar Event created successfully via createGoogleCalendarEvent. Event ID: %s, Kseft ID: %s', date('Y-m-d H:i:s'), $created_event->getId(), $kseftId));
+            return $created_event->id;
+        } catch (Google_Service_Exception $e) {
+            $error_code = $e->getCode();
+            $error_message = $e->getMessage();
+            error_log(sprintf('[%s] Google_Service_Exception in createGoogleCalendarEvent (Attempt %d/%d) for Kseft ID %s: Code %s, Message: %s', date('Y-m-d H:i:s'), $attempt + 1, $max_retries + 1, $kseftId, $error_code, $error_message));
+
+            if ($error_code == 429 && $attempt < $max_retries) {
+                $delay_seconds = ($retry_delay / 1000) * pow(2, $attempt);
+                error_log(sprintf('[%s] Rate limit exceeded for createGoogleCalendarEvent. Retrying in %d seconds...', date('Y-m-d H:i:s'), $delay_seconds));
+                usleep($delay_seconds * 1000000);
+            } else {
+                error_log(sprintf('[%s] Failed to create event for Kseft ID %s after retries or for non-retryable error. Code: %s, Message: %s', date('Y-m-d H:i:s'), $kseftId, $error_code, $error_message));
+                return false;
+            }
+        } catch (Exception $e) {
+            $error_message = $e->getMessage();
+            error_log(sprintf('[%s] Generic Exception in createGoogleCalendarEvent (Attempt %d/%d) for Kseft ID %s: Message: %s', date('Y-m-d H:i:s'), $attempt + 1, $max_retries + 1, $kseftId, $error_message));
+            return false;
+        }
+    }
+    // If all retries fail
+    error_log(sprintf('[%s] Failed to create event for Kseft ID %s after maximum retries due to persistent 429 errors.', date('Y-m-d H:i:s'), $kseftId));
+    return false;
 }
 
 ?>
